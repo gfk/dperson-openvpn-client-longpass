@@ -48,9 +48,9 @@ RUN dch -l +longpass1 -D ${DEBIAN_SUITE} -u low \
 RUN dpkg-buildpackage -us -uc -b
 
 # ---------- runtime (trixie, dperson UX) ----------
-FROM debian:${DEBIAN_SUITE}-slim
 ARG DEBIAN_SUITE
-MAINTAINER Guillaume Filion <guillaume@filion.org>
+FROM debian:${DEBIAN_SUITE}-slim
+LABEL maintainer="Guillaume Filion <guillaume@filion.org>"
 ENV DEBIAN_FRONTEND=noninteractive
 RUN apt-get update && apt-get install -y --no-install-recommends \
       bash curl ca-certificates iproute2 iptables tzdata tini \
