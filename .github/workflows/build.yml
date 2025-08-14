@@ -44,7 +44,7 @@ jobs:
           tags: current-build
 
       - name: Detect Debian stable codename
-        id: detect
+        id: debian-version
         run: |
           set -euo pipefail
           # Resolve stable codename by inspecting /etc/os-release inside the base image
@@ -73,8 +73,8 @@ jobs:
         run: |
           set -euo pipefail
           IMG="${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}"
-          SUITE="${{ steps.detect.outputs.codename }}"
-          VER="${{ steps.detect.outputs.safe_deb_version }}"
+          SUITE="${{ steps.debian-version.outputs.codename }}"
+          VER="${{ steps.openvpn-version.outputs.safe_deb_version }}"
           echo "primary=${IMG}:debian-${SUITE}-openvpn-${VER}" >> "$GITHUB_OUTPUT"
           echo "compat1=${IMG}:${VER}-debian-${SUITE}" >> "$GITHUB_OUTPUT"
           echo "compat2=${IMG}:${VER}" >> "$GITHUB_OUTPUT"
@@ -117,9 +117,9 @@ jobs:
             type=raw,value=${{ steps.tags.outputs.compat2 }}
             type=raw,value=${{ steps.tags.outputs.latest }},enable={{is_default_branch}}
           labels: |
-            org.opencontainers.image.version=${{ steps.detect.outputs.deb_version }}
+            org.opencontainers.image.version=${{ steps.openvpn-version.outputs.deb_version }}
             org.opencontainers.image.base.name=debian:stable-slim
-            org.opencontainers.image.ref.name=openvpn=${{ steps.detect.outputs.deb_version }}
+            org.opencontainers.image.ref.name=openvpn=${{ steps.openvpn-version.outputs.deb_version }}
 
       - name: Push the images to ghcr.io
         if: github.event_name != 'schedule' || (steps.image-exists.outputs.exists == 'false' && github.ref == 'refs/heads/master')
