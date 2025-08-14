@@ -28,14 +28,18 @@ env:
   IMAGE_NAME: ${{ github.repository }}
 
 jobs:
-  build:
-    runs-on: ubuntu-latest
+  prepare:
+    runs-on: ubuntu-24.04
+    outputs:
+      codename: ${{ steps.out.outputs.codename }}
+      deb_version: ${{ steps.out.outputs.deb_version }}
+      safe_deb_version: ${{ steps.out.outputs.safe_deb_version }}
+      primary: ${{ steps.out.outputs.primary }}
+      compat1: ${{ steps.out.outputs.compat1 }}
+      compat2: ${{ steps.out.outputs.compat2 }}
+      latest: ${{ steps.out.outputs.latest }}
+      should_build: ${{ steps.out.outputs.should_build }}
     steps:
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
-      - name: Set up QEMU
-        uses: docker/setup-qemu-action@v3
-
       - name: Detect Debian stable codename
         id: debian-version
         run: |
@@ -61,27 +65,16 @@ jobs:
           echo "deb_version=$DEBVER" >> "$GITHUB_OUTPUT"
           echo "safe_deb_version=$SAFE_DEBVER" >> "$GITHUB_OUTPUT"
 
-      - name: Build Docker image
-        uses: docker/build-push-action@v5
-        with:
-          pull: true
-          load: true
-          push: false
-          tags: current-build
-          build-args: |
-            BASE_SUITE=${{ steps.debian-version.outputs.codename }}
-            OPENVPN_VERSION=${{ steps.openvpn-version.outputs.deb_version }}
-
       - name: Compose tags
         id: tags
         run: |
           set -euo pipefail
           IMG="${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}"
-          SUITE="${{ steps.debian-version.outputs.codename }}"
-          VER="${{ steps.openvpn-version.outputs.safe_deb_version }}"
-          echo "primary=${IMG}:debian-${SUITE}-openvpn-${VER}" >> "$GITHUB_OUTPUT"
-          echo "compat1=${IMG}:${VER}-debian-${SUITE}" >> "$GITHUB_OUTPUT"
-          echo "compat2=${IMG}:${VER}" >> "$GITHUB_OUTPUT"
+          SUITE="${{ steps.debian.outputs.codename }}"
+          VER_SAFE="${{ steps.ovpn.outputs.safe_deb_version }}"
+          echo "primary=${IMG}:debian-${SUITE}-openvpn-${VER_SAFE}" >> "$GITHUB_OUTPUT"
+          echo "compat1=${IMG}:${VER_SAFE}-debian-${SUITE}" >> "$GITHUB_OUTPUT"
+          echo "compat2=${IMG}:${VER_SAFE}" >> "$GITHUB_OUTPUT"
           echo "latest=${IMG}:latest" >> "$GITHUB_OUTPUT"
 
       - name: Check if the image already exists
@@ -93,47 +86,160 @@ jobs:
           
           echo "Checking if image $IMAGE exists"
           
-          if docker pull $IMAGE; then
+          if docker pull $IMAGE >/dev/null 2>&1; then
             echo "Image already exists"
-            echo "exists=true" >> $GITHUB_OUTPUT
+            echo "exists=true" >> "$GITHUB_OUTPUT"
           else
             echo "Image does not exist"
-            echo "exists=false" >> $GITHUB_OUTPUT
+            echo "exists=false" >> "$GITHUB_OUTPUT"
           fi
 
-      - name: Log in to ghcr.io
-        if: github.event_name != 'schedule' || steps.image-exists.outputs.exists == 'false'
-        uses: docker/login-action@v3
+      - name: Decide build/push
+        id: out
+        run: |
+          set -euo pipefail
+          echo "codename=${{ steps.debian.outputs.codename }}" >> "$GITHUB_OUTPUT"
+          echo "deb_version=${{ steps.ovpn.outputs.deb_version }}" >> "$GITHUB_OUTPUT"
+          echo "safe_deb_version=${{ steps.ovpn.outputs.safe_deb_version }}" >> "$GITHUB_OUTPUT"
+          echo "primary=${{ steps.tags.outputs.primary }}"   >> "$GITHUB_OUTPUT"
+          echo "compat1=${{ steps.tags.outputs.compat1 }}"   >> "$GITHUB_OUTPUT"
+          echo "compat2=${{ steps.tags.outputs.compat2 }}"   >> "$GITHUB_OUTPUT"
+          echo "latest=${{ steps.tags.outputs.latest }}"     >> "$GITHUB_OUTPUT"
+
+          if [ "${{ github.event_name }}" != "schedule" ] || { [ "${{ steps.image-exists.outputs.exists }}" = "false" ] && [ "${{ github.ref }}" = "refs/heads/master" ]; }; then
+            echo "should_build=true"  >> "$GITHUB_OUTPUT"
+          else
+            echo "should_build=false" >> "$GITHUB_OUTPUT"
+          fi
+
+  build-amd64:
+    needs: prepare
+    if: needs.prepare.outputs.should_build == 'true'
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: docker/setup-buildx-action@v3
+      - uses: docker/login-action@v3
         with:
           registry: ${{ env.REGISTRY }}
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Extract metadata (tags, labels) for Docker
-        if: github.event_name != 'schedule' || steps.image-exists.outputs.exists == 'false'
-        id: meta
-        uses: docker/metadata-action@v5
-        with:
-          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
-          tags: |
-            type=raw,value=${{ steps.tags.outputs.primary }}
-            type=raw,value=${{ steps.tags.outputs.compat1 }}
-            type=raw,value=${{ steps.tags.outputs.compat2 }}
-            type=raw,value=${{ steps.tags.outputs.latest }},enable={{is_default_branch}}
-          labels: |
-            org.opencontainers.image.version=${{ steps.openvpn-version.outputs.deb_version }}
-            org.opencontainers.image.base.name=debian:stable-slim
-            org.opencontainers.image.ref.name=openvpn=${{ steps.openvpn-version.outputs.deb_version }}
-
-      - name: Push the images to ghcr.io
-        if: github.event_name != 'schedule' || (steps.image-exists.outputs.exists == 'false' && github.ref == 'refs/heads/master')
+      - name: Build & push (amd64)
         uses: docker/build-push-action@v5
         with:
+          context: .
+          platforms: linux/amd64
           push: true
-          tags: ${{ steps.meta.outputs.tags }}
-          labels: ${{ steps.meta.outputs.labels }}
-          platforms: linux/amd64,linux/arm64
           build-args: |
-            BASE_SUITE=${{ steps.debian-version.outputs.codename }}
-            OPENVPN_VERSION=${{ steps.openvpn-version.outputs.deb_version }}
+            BASE_SUITE=${{ needs.prepare.outputs.codename }}
+            OPENVPN_VERSION=${{ needs.prepare.outputs.deb_version }}
+          tags: |
+            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:debian-${{ needs.prepare.outputs.codename }}-openvpn-${{ needs.prepare.outputs.safe_deb_version }}-amd64
+            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ needs.prepare.outputs.safe_deb_version }}-debian-${{ needs.prepare.outputs.codename }}-amd64
+            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ needs.prepare.outputs.safe_deb_version }}-amd64
+          labels: |
+            org.opencontainers.image.version=${{ needs.prepare.outputs.deb_version }}
+            org.opencontainers.image.base.name=debian:${{ needs.prepare.outputs.codename }}-slim
+            org.opencontainers.image.ref.name=openvpn=${{ needs.prepare.outputs.deb_version }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+  build-arm64:
+    needs: prepare
+    if: needs.prepare.outputs.should_build == 'true'
+    runs-on: ubuntu-24.04-arm   # Hosted ARM64 runner
+    steps:
+      - uses: actions/checkout@v4
+      - uses: docker/setup-buildx-action@v3
+      - uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build & push (arm64)
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          platforms: linux/arm64
+          push: true
+          build-args: |
+            BASE_SUITE=${{ needs.prepare.outputs.codename }}
+            OPENVPN_VERSION=${{ needs.prepare.outputs.deb_version }}
+          tags: |
+            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:debian-${{ needs.prepare.outputs.codename }}-openvpn-${{ needs.prepare.outputs.safe_deb_version }}-arm64
+            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ needs.prepare.outputs.safe_deb_version }}-debian-${{ needs.prepare.outputs.codename }}-arm64
+            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ needs.prepare.outputs.safe_deb_version }}-arm64
+          labels: |
+            org.opencontainers.image.version=${{ needs.prepare.outputs.deb_version }}
+            org.opencontainers.image.base.name=debian:${{ needs.prepare.outputs.codename }}-slim
+            org.opencontainers.image.ref.name=openvpn=${{ needs.prepare.outputs.deb_version }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+  # Optional: keep a slow QEMU build for arm/v7 (Raspberry Pi OS 32-bit)
+  # build-armv7:
+  #   needs: prepare
+  #   if: needs.prepare.outputs.should_build == 'true'
+  #   runs-on: ubuntu-24.04
+  #   steps:
+  #     - uses: actions/checkout@v4
+  #     - uses: docker/setup-qemu-action@v3
+  #     - uses: docker/setup-buildx-action@v3
+  #     - uses: docker/login-action@v3
+  #       with:
+  #         registry: ${{ env.REGISTRY }}
+  #         username: ${{ github.actor }}
+  #         password: ${{ secrets.GITHUB_TOKEN }}
+  #     - name: Build & push (arm/v7)
+  #       uses: docker/build-push-action@v5
+  #       with:
+  #         context: .
+  #         platforms: linux/arm/v7
+  #         push: true
+  #         build-args: |
+  #           BASE_SUITE=${{ needs.prepare.outputs.codename }}
+  #           OPENVPN_VERSION=${{ needs.prepare.outputs.deb_version }}
+  #         tags: |
+  #           ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:debian-${{ needs.prepare.outputs.codename }}-openvpn-${{ needs.prepare.outputs.safe_deb_version }}-armv7
+  #           ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ needs.prepare.outputs.safe_deb_version }}-debian-${{ needs.prepare.outputs.codename }}-armv7
+  #           ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ needs.prepare.outputs.safe_deb_version }}-armv7
+
+  manifest:
+    needs: [prepare, build-amd64, build-arm64]  # add build-armv7 if you enable it
+    if: needs.prepare.outputs.should_build == 'true'
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Create multi-arch manifests
+        run: |
+          set -eux
+          IMG="${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}"
+          SUITE='${{ needs.prepare.outputs.codename }}'
+          VER='${{ needs.prepare.outputs.safe_deb_version }}'
+
+          SRC_AMD64="$IMG:debian-$SUITE-openvpn-$VER-amd64"
+          SRC_ARM64="$IMG:debian-$SUITE-openvpn-$VER-arm64"
+          # If you add armv7, include it here:
+          # SRC_ARMV7="$IMG:debian-$SUITE-openvpn-$VER-armv7"
+
+          # primary, compat1, compat2
+          docker buildx imagetools create \
+            -t "$IMG:debian-$SUITE-openvpn-$VER" \
+            -t "$IMG:$VER-debian-$SUITE" \
+            -t "$IMG:$VER" \
+            "$SRC_AMD64" "$SRC_ARM64"
+
+          # latest only on default branch (master)
+          if [ "${{ github.ref }}" = "refs/heads/master" ]; then
+            docker buildx imagetools create \
+              -t "$IMG:latest" \
+              "$SRC_AMD64" "$SRC_ARM64"
+          fi
 
