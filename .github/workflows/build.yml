@@ -130,6 +130,6 @@ jobs:
           labels: ${{ steps.meta.outputs.labels }}
           platforms: linux/amd64,linux/arm64,linux/arm/v7
           build-args: |
-            DEBIAN_SUITE=${{ steps.detect.outputs.codename }}
-            OPENVPN_VERSION=${{ steps.detect.outputs.deb_version }}
+            DEBIAN_SUITE=${{ steps.debian-version.outputs.codename }}
+            OPENVPN_VERSION=${{ steps.openvpn-version.outputs.deb_version }}
 
