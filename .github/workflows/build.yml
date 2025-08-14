@@ -32,6 +32,7 @@ jobs:
     runs-on: ubuntu-24.04
     outputs:
       codename: ${{ steps.out.outputs.codename }}
+      base_digest: ${{ steps.out.outputs.base_digest }}
       deb_version: ${{ steps.out.outputs.deb_version }}
       safe_deb_version: ${{ steps.out.outputs.safe_deb_version }}
       primary: ${{ steps.out.outputs.primary }}
@@ -40,6 +41,7 @@ jobs:
       latest: ${{ steps.out.outputs.latest }}
       should_build: ${{ steps.out.outputs.should_build }}
     steps:
+      - uses: docker/setup-buildx-action@v3
       - name: Detect Debian stable codename
         id: debian-version
         run: |
