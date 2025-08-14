@@ -1,9 +1,11 @@
 # dperson-openvpn-client-longpass (Debian)
 
 Drop-in replacement for [`dperson/openvpn-client`](https://github.com/dperson/openvpn-client) that accepts **username/passwords >128 chars**.  
-Built from **Debian’s OpenVPN source** with a tiny patch that bumps `USER_PASS_LEN`, packaged as a `.deb`, and run with the original `openvpn.sh` UX.
+Built from **Debian’s OpenVPN source** with a tiny patch that bumps `USER_PASS_LEN`, packaged as a `.deb`, and run with the original `openvpn.sh` UX. 
 
-> **Why?** Some providers (like [**1NCE**](https://help.1nce.com/dev-hub/docs/vpn-service-features-limitations#vpn-client-password-length)) issue JWT-based client passwords that exceed OpenVPN’s stock 127-char limit, which causes `AUTH_FAILED`. This image removes that client-side limit while keeping the familiar dperson workflow.
+> **Why the long password patch?** Some providers (like [**1NCE**](https://help.1nce.com/dev-hub/docs/vpn-service-features-limitations#vpn-client-password-length)) issue JWT-based client passwords that exceed OpenVPN’s stock 127-char limit, which causes `AUTH_FAILED`. This image removes that client-side limit while keeping the familiar dperson workflow.
+
+Every week, a Github action (based on [`utkuozdemir/dperson-openvpn-client`](https://github.com/utkuozdemir/dperson-openvpn-client)) **checks if there's a new version of openvpn or the debian:stable-slim** image, if so, it builds a new image with the latest versions. This ensures that we're always up to date and **avoid any known security vulnerabilities** without any manual intervention.
 
 ---
 
@@ -74,6 +76,8 @@ docker run --rm ghcr.io/gfk/dperson-openvpn-client-longpass:latest /usr/sbin/ope
 ---
 
 ## Using the dperson flags (unchanged)
+
+See the [`dperson/openvpn-client`](https://github.com/dperson/openvpn-client) README for the full instructions.
 
 ```bash
 docker run --rm --cap-add=NET_ADMIN --device /dev/net/tun   -v $PWD/ovpn:/vpn   ghcr.io/gfk/dperson-openvpn-client-longpass:latest   -v 'vpn.server.example;USERNAME;A_very_long_password'   -r 192.168.1.0/24 -f ""
