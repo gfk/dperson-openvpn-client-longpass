@@ -48,7 +48,6 @@ RUN dch -l +longpass1 -D ${DEBIAN_SUITE} -u low \
 RUN dpkg-buildpackage -us -uc -b
 
 # ---------- runtime (trixie, dperson UX) ----------
-ARG DEBIAN_SUITE
 FROM debian:${DEBIAN_SUITE}-slim
 LABEL maintainer="Guillaume Filion <guillaume@filion.org>"
 ENV DEBIAN_FRONTEND=noninteractive
