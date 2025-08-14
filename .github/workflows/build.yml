@@ -35,16 +35,6 @@ jobs:
         uses: docker/setup-buildx-action@v3
       - name: Set up QEMU
         uses: docker/setup-qemu-action@v3
-      - name: Build Docker image
-        uses: docker/build-push-action@v5
-        with:
-          pull: true
-          load: true
-          push: false
-          tags: current-build
-          build-args: |
-            BASE_SUITE=${{ steps.debian-version.outputs.codename }}
-            OPENVPN_VERSION=${{ steps.openvpn-version.outputs.deb_version }}
 
       - name: Detect Debian stable codename
         id: debian-version
@@ -70,6 +60,17 @@ jobs:
           SAFE_DEBVER=$(printf "%s" "$DEBVER" | tr '+' '_' | tr ' ' '_')
           echo "deb_version=$DEBVER" >> "$GITHUB_OUTPUT"
           echo "safe_deb_version=$SAFE_DEBVER" >> "$GITHUB_OUTPUT"
+
+      - name: Build Docker image
+        uses: docker/build-push-action@v5
+        with:
+          pull: true
+          load: true
+          push: false
+          tags: current-build
+          build-args: |
+            BASE_SUITE=${{ steps.debian-version.outputs.codename }}
+            OPENVPN_VERSION=${{ steps.openvpn-version.outputs.deb_version }}
 
       - name: Compose tags
         id: tags
