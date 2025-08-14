@@ -1,11 +1,16 @@
-ARG DEBIAN_SUITE=trixie
+# syntax=docker/dockerfile:1.7
+
+# Use a dedicated arg for FROM, to avoid scope collisions
+ARG BASE_SUITE=trixie
 ARG OPENVPN_VERSION=2.6.14-1
 
-# ---------- build (Debian packaging on trixie) ----------
-FROM debian:${DEBIAN_SUITE}-slim AS build
-ARG DEBIAN_SUITE
+# ---------- build (Debian packaging on ${BASE_SUITE}) ----------
+ARG BASE_SUITE
+FROM debian:${BASE_SUITE}-slim AS build
+ARG BASE_SUITE
 ARG OPENVPN_VERSION
-ENV DEBIAN_FRONTEND=noninteractive DEB_BUILD_OPTIONS="nodoc nocheck"
+ENV DEBIAN_FRONTEND=noninteractive DEB_BUILD_OPTIONS="nodoc nocheck" \
+    DEBIAN_SUITE=${BASE_SUITE}
 
 # tools
 RUN apt-get update && apt-get install -y --no-install-recommends \
@@ -47,10 +52,12 @@ RUN dch -l +longpass1 -D ${DEBIAN_SUITE} -u low \
 # Build unsigned binaries (binary packages only)
 RUN dpkg-buildpackage -us -uc -b
 
-# ---------- runtime (trixie, dperson UX) ----------
-FROM debian:${DEBIAN_SUITE}-slim
+# ---------- runtime (${BASE_SUITE}, dperson UX) ----------
+ARG BASE_SUITE
+FROM debian:${BASE_SUITE}-slim
 LABEL maintainer="Guillaume Filion <guillaume@filion.org>"
 ENV DEBIAN_FRONTEND=noninteractive
+
 RUN apt-get update && apt-get install -y --no-install-recommends \
       bash curl ca-certificates iproute2 iptables tzdata tini \
       libssl3 liblz4-1 liblzo2-2 libpkcs11-helper1 procps psmisc && \
@@ -67,8 +74,9 @@ RUN groupadd -r vpn \
 
 COPY --from=build /src/openvpn_*_*.deb /tmp/
 RUN apt-get update && apt-get install -y /tmp/openvpn_*_*.deb && rm -rf /var/lib/apt/lists/*
-# dperson entry script (keep in ./ovpn)
+
 COPY openvpn.sh /openvpn.sh
 RUN chmod +x /openvpn.sh
 WORKDIR /vpn
 ENTRYPOINT ["/usr/bin/tini","--","/openvpn.sh"]
+
