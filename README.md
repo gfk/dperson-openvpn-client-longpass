@@ -1,7 +1,7 @@
 # dperson-openvpn-client-longpass (Debian)
 
 Drop-in replacement for [`dperson/openvpn-client`](https://github.com/dperson/openvpn-client) that accepts **username/passwords >128 chars**.  
-Built from **Debian’s OpenVPN source** with a tiny patch that bumps `USER_PASS_LEN`, packaged as a `.deb`, and run with the original `openvpn.sh` UX. 
+Built from [Debian’s OpenVPN source](https://tracker.debian.org/pkg/openvpn) with a tiny patch that bumps `USER_PASS_LEN`, packaged as a `.deb`, and run with the original `openvpn.sh` UX. 
 
 > **Why the long password patch?** Some providers (like [**1NCE**](https://help.1nce.com/dev-hub/docs/vpn-service-features-limitations#vpn-client-password-length)) issue JWT-based client passwords that exceed OpenVPN’s stock 127-char limit, which causes `AUTH_FAILED`. This image removes that client-side limit while keeping the familiar dperson workflow.
 
