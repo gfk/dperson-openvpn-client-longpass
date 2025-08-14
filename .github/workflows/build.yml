@@ -70,8 +70,8 @@ jobs:
         run: |
           set -euo pipefail
           IMG="${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}"
-          SUITE="${{ steps.debian.outputs.codename }}"
-          VER_SAFE="${{ steps.ovpn.outputs.safe_deb_version }}"
+          SUITE="${{ steps.debian-version.outputs.codename }}"
+          VER_SAFE="${{ steps.openvpn-version.outputs.safe_deb_version }}"
           echo "primary=${IMG}:debian-${SUITE}-openvpn-${VER_SAFE}" >> "$GITHUB_OUTPUT"
           echo "compat1=${IMG}:${VER_SAFE}-debian-${SUITE}" >> "$GITHUB_OUTPUT"
           echo "compat2=${IMG}:${VER_SAFE}" >> "$GITHUB_OUTPUT"
