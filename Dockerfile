@@ -1,18 +1,70 @@
-FROM alpine
-MAINTAINER Utku Ozdemir <utkuozdemir@gmail.com>
+ARG DEBIAN_SUITE=stable
+ARG OPENVPN_VERSION=2.6.14-1
 
-# Install openvpn
-RUN apk --no-cache --no-progress upgrade && \
-    apk --no-cache --no-progress add bash curl ip6tables iptables openvpn \
-                shadow tini tzdata shadow-login && \
-    addgroup -S vpn && \
-    rm -rf /tmp/*
+# ---------- build (Debian packaging on trixie) ----------
+FROM debian:${DEBIAN_SUITE}-slim AS build
+ENV DEBIAN_FRONTEND=noninteractive DEB_BUILD_OPTIONS="nodoc nocheck"
 
-COPY openvpn.sh /usr/bin/
+# tools
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    devscripts dpkg-dev quilt ca-certificates wget gnupg build-essential
 
-HEALTHCHECK --interval=60s --timeout=15s --start-period=120s \
-             CMD curl -LSs 'https://api.ipify.org'
+# enable deb-src (classic format is simplest)
+RUN printf 'deb http://deb.debian.org/debian ${DEBIAN_SUITE} main\n\
+deb-src http://deb.debian.org/debian ${DEBIAN_SUITE} main\n\
+deb http://security.debian.org/debian-security ${DEBIAN_SUITE}-security main\n\
+deb-src http://security.debian.org/debian-security ${DEBIAN_SUITE}-security main\n\
+deb http://deb.debian.org/debian ${DEBIAN_SUITE}-updates main\n\
+deb-src http://deb.debian.org/debian ${DEBIAN_SUITE}-updates main\n' > /etc/apt/sources.list \
+ && apt-get update \
+ && apt-get -y build-dep openvpn
 
-VOLUME ["/vpn"]
+WORKDIR /src
+RUN dget -u https://deb.debian.org/debian/pool/main/o/openvpn/openvpn_${OPENVPN_VERSION}.dsc
+WORKDIR /src/openvpn-${OPENVPN_VERSION}
 
-ENTRYPOINT ["/sbin/tini", "--", "/usr/bin/openvpn.sh"]
+# Patch: bump USER_PASS_LEN for very long creds
+RUN export QUILT_PATCHES=debian/patches && \
+    quilt new long-passlen.patch && \
+    quilt add src/openvpn/misc.h && \
+    sed -i 's/#define USER_PASS_LEN 128/#define USER_PASS_LEN (1 << 17)/' src/openvpn/misc.h && \
+    quilt refresh
+
+# set maintainer info for dch
+ENV DEBFULLNAME="Guillaume Filion" \
+    DEBEMAIL="guillaume@filion.org" \
+    DEBCHANGE_EDITOR="/bin/true"
+
+# bump version: 2.6.14-1 → 2.6.14-1+longpass1
+RUN dch -l +longpass1 -D trixie -u low \
+  "Increase USER_PASS_LEN to support >128-char passwords." \
+ && dpkg-parsechangelog -S Version | grep -q '+longpass1'
+
+# Build unsigned binaries (binary packages only)
+RUN dpkg-buildpackage -us -uc -b
+
+# ---------- runtime (trixie, dperson UX) ----------
+FROM debian:${DEBIAN_SUITE}-slim
+MAINTAINER Guillaume Filion <guillaume@filion.org>
+ENV DEBIAN_FRONTEND=noninteractive
+RUN apt-get update && apt-get install -y --no-install-recommends \
+      bash curl ca-certificates iproute2 iptables tzdata tini \
+      libssl3 liblz4-1 liblzo2-2 libpkcs11-helper1 procps psmisc && \
+    rm -rf /var/lib/apt/lists/*
+
+# dperson script expects a 'vpn' group; also silence FIB-table noise
+RUN groupadd -r vpn \
+  && useradd -r -g vpn -s /usr/sbin/nologin vpn \
+  && install -d -m 0750 -o root -g vpn /vpn \
+  && mkdir -p /etc/iproute2 \
+  && { [ -f /etc/iproute2/rt_tables ] || :; } \
+  && grep -Eq '^[[:space:]]*200[[:space:]]+vpn$' /etc/iproute2/rt_tables 2>/dev/null \
+     || printf '200 vpn\n' >> /etc/iproute2/rt_tables
+
+COPY --from=build /src/openvpn_*_amd64.deb /tmp/
+RUN apt-get update && apt-get install -y /tmp/openvpn_*_amd64.deb && rm -rf /var/lib/apt/lists/*
+# dperson entry script (keep in ./ovpn)
+COPY openvpn.sh /openvpn.sh
+RUN chmod +x /openvpn.sh
+WORKDIR /vpn
+ENTRYPOINT ["/usr/bin/tini","--","/openvpn.sh"]

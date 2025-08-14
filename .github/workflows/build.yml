@@ -15,9 +15,9 @@ on:
     paths-ignore:
       - "**.md"
       - ".gitignore"
-  # cron to run every Sunday at 00:00 UTC
+  # cron to run every Sunday at 04:34 UTC
   schedule:
-    - cron: "0 0 * * 0"
+    - cron: "34 4 * * 0"
 
 concurrency:
   group: build-${{ github.event.pull_request.number || github.ref }}
@@ -43,36 +43,49 @@ jobs:
           push: false
           tags: current-build
 
-      - name: Extract alpine version
-        id: alpine-version
+      - name: Detect Debian stable codename
+        id: detect
         run: |
           set -euo pipefail
-          
-          ALPINE_VERSION=$(docker run --pull=never --rm current-build cat /etc/os-release | \
-            grep VERSION_ID | \
-            awk -F'=' ' { print $NF } ' | \
-            tr -d '[:space:]')
-          echo "Extracted ALPINE_VERSION=$ALPINE_VERSION"
-          echo "version=$ALPINE_VERSION" >> $GITHUB_OUTPUT
+          # Resolve stable codename by inspecting /etc/os-release inside the base image
+          OSREL=$(docker run --rm debian:stable-slim bash -lc 'cat /etc/os-release')
+          CODENAME=$(printf "%s" "$OSREL" | awk -F= '/^VERSION_CODENAME=/{print $2}')
+          VERSION_ID=$(printf "%s" "$OSREL" | awk -F= '/^VERSION_ID=/{print $2}')
+          echo "Debian stable codename: $CODENAME (VERSION_ID=$VERSION_ID)"
+          echo "codename=$CODENAME" >> "$GITHUB_OUTPUT"
+          echo "version_id=$VERSION_ID" >> "$GITHUB_OUTPUT"
 
       - name: Extract openvpn version
         id: openvpn-version
         run: |
+          DEBVER=$(docker run --rm debian:stable-slim bash -lc 'apt-get update -qq && apt-cache policy openvpn | awk "/Candidate:/ {print \$2}"')
+          if [ -z "$DEBVER" ] || [ "$DEBVER" = "(none)" ]; then
+            echo "Failed to detect OpenVPN version from apt-cache policy"; exit 1
+          fi
+          echo "Detected OpenVPN Debian version: $DEBVER"
+          # OCI tags cannot contain '+'; normalize
+          SAFE_DEBVER=$(printf "%s" "$DEBVER" | tr '+' '_' | tr ' ' '_')
+          echo "deb_version=$DEBVER" >> "$GITHUB_OUTPUT"
+          echo "safe_deb_version=$SAFE_DEBVER" >> "$GITHUB_OUTPUT"
+
+      - name: Compose tags
+        id: tags
+        run: |
           set -euo pipefail
-          
-          OPENVPN_VERSION=$(docker run --pull=never --rm current-build openvpn --version | \
-            grep -o 'OpenVPN [0-9.]*' | \
-            awk '{print $2}' | \
-            tr -d '[:space:]')
-          echo "Extracted OPENVPN_VERSION=$OPENVPN_VERSION"
-          echo "version=$OPENVPN_VERSION" >> $GITHUB_OUTPUT
+          IMG="${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}"
+          SUITE="${{ steps.detect.outputs.codename }}"
+          VER="${{ steps.detect.outputs.safe_deb_version }}"
+          echo "primary=${IMG}:debian-${SUITE}-openvpn-${VER}" >> "$GITHUB_OUTPUT"
+          echo "compat1=${IMG}:${VER}-debian-${SUITE}" >> "$GITHUB_OUTPUT"
+          echo "compat2=${IMG}:${VER}" >> "$GITHUB_OUTPUT"
+          echo "latest=${IMG}:latest" >> "$GITHUB_OUTPUT"
 
       - name: Check if the image already exists
         id: image-exists
         run: |
           set -euo pipefail
           
-          IMAGE=$(echo "${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:alpine-${{ steps.alpine-version.outputs.version }}-openvpn-${{ steps.openvpn-version.outputs.version }}")
+          IMAGE="${{ steps.tags.outputs.primary }}"
           
           echo "Checking if image $IMAGE exists"
           
@@ -99,10 +112,14 @@ jobs:
         with:
           images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
           tags: |
-            type=raw,value=alpine-${{ steps.alpine-version.outputs.version }}-openvpn-${{ steps.openvpn-version.outputs.version }}
-            type=raw,value=${{ steps.openvpn-version.outputs.version }}-alpine-${{ steps.alpine-version.outputs.version }}
-            type=raw,value=${{ steps.openvpn-version.outputs.version }}
-            type=raw,value=latest
+            type=raw,value=${{ steps.tags.outputs.primary }}
+            type=raw,value=${{ steps.tags.outputs.compat1 }}
+            type=raw,value=${{ steps.tags.outputs.compat2 }}
+            type=raw,value=${{ steps.tags.outputs.latest }},enable={{is_default_branch}}
+          labels: |
+            org.opencontainers.image.version=${{ steps.detect.outputs.deb_version }}
+            org.opencontainers.image.base.name=debian:stable-slim
+            org.opencontainers.image.ref.name=openvpn=${{ steps.detect.outputs.deb_version }}
 
       - name: Push the images to ghcr.io
         if: github.event_name != 'schedule' || (steps.image-exists.outputs.exists == 'false' && github.ref == 'refs/heads/master')
@@ -112,3 +129,7 @@ jobs:
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
           platforms: linux/amd64,linux/arm64,linux/arm/v7
+          build-args: |
+            DEBIAN_SUITE=${{ steps.detect.outputs.codename }}
+            OPENVPN_VERSION=${{ steps.detect.outputs.deb_version }}
+
