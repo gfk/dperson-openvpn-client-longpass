@@ -48,9 +48,11 @@ jobs:
           OSREL=$(docker run --rm debian:stable-slim bash -lc 'cat /etc/os-release')
           CODENAME=$(printf "%s" "$OSREL" | awk -F= '/^VERSION_CODENAME=/{print $2}')
           VERSION_ID=$(printf "%s" "$OSREL" | awk -F= '/^VERSION_ID=/{print $2}')
-          echo "Debian stable codename: $CODENAME (VERSION_ID=$VERSION_ID)"
+          BASE_DIGEST=$(docker buildx imagetools inspect "debian:${CODENAME}-slim" | awk '/Digest:/ {print $2; exit}')
+          echo "Debian stable codename: $CODENAME (VERSION_ID=$VERSION_ID; BASE_DIGEST=$BASE_DIGEST)"
           echo "codename=$CODENAME" >> "$GITHUB_OUTPUT"
           echo "version_id=$VERSION_ID" >> "$GITHUB_OUTPUT"
+          echo "base_digest=$BASE_DIGEST" >> "$GITHUB_OUTPUT"
 
       - name: Extract openvpn version
         id: openvpn-version
@@ -77,23 +79,6 @@ jobs:
           echo "compat2=${IMG}:${VER_SAFE}" >> "$GITHUB_OUTPUT"
           echo "latest=${IMG}:latest" >> "$GITHUB_OUTPUT"
 
-      - name: Check if the image already exists
-        id: image-exists
-        run: |
-          set -euo pipefail
-          
-          IMAGE="${{ steps.tags.outputs.primary }}"
-          
-          echo "Checking if image $IMAGE exists"
-          
-          if docker pull $IMAGE >/dev/null 2>&1; then
-            echo "Image already exists"
-            echo "exists=true" >> "$GITHUB_OUTPUT"
-          else
-            echo "Image does not exist"
-            echo "exists=false" >> "$GITHUB_OUTPUT"
-          fi
-
       - name: Decide build/push
         id: out
         run: |
@@ -106,7 +91,17 @@ jobs:
           echo "compat2=${{ steps.tags.outputs.compat2 }}"   >> "$GITHUB_OUTPUT"
           echo "latest=${{ steps.tags.outputs.latest }}"     >> "$GITHUB_OUTPUT"
 
-          if [ "${{ github.event_name }}" != "schedule" ] || { [ "${{ steps.image-exists.outputs.exists }}" = "false" ] && [ "${{ github.ref }}" = "refs/heads/master" ]; }; then
+          IMAGE="${{ steps.tags.outputs.primary }}"
+
+          if docker pull "$IMAGE" >/dev/null 2>&1; then
+            REMOTE_BASE=$(docker inspect --format '{{ index .Config.Labels "org.opencontainers.image.base.digest" }}' "$IMAGE" 2>/dev/null || true)
+            echo "Image already exists, digest: $REMOTE_BASE"
+          else
+            echo "Image does not exist"
+            REMOTE_BASE=""
+          fi
+
+          if [ "${{ github.event_name }}" != "schedule" ] || { [ -z "$REMOTE_BASE" ] || [ "$REMOTE_BASE" != "$BASE_DIGEST" ] && [ "${{ github.ref }}" = "refs/heads/master" ]; }; then
             echo "should_build=true"  >> "$GITHUB_OUTPUT"
           else
             echo "should_build=false" >> "$GITHUB_OUTPUT"
@@ -141,6 +136,7 @@ jobs:
           labels: |
             org.opencontainers.image.version=${{ needs.prepare.outputs.deb_version }}
             org.opencontainers.image.base.name=debian:${{ needs.prepare.outputs.codename }}-slim
+            org.opencontainers.image.base.digest=${{ needs.prepare.outputs.base_digest }}
             org.opencontainers.image.ref.name=openvpn=${{ needs.prepare.outputs.deb_version }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
@@ -174,6 +170,7 @@ jobs:
           labels: |
             org.opencontainers.image.version=${{ needs.prepare.outputs.deb_version }}
             org.opencontainers.image.base.name=debian:${{ needs.prepare.outputs.codename }}-slim
+            org.opencontainers.image.base.digest=${{ needs.prepare.outputs.base_digest }}
             org.opencontainers.image.ref.name=openvpn=${{ needs.prepare.outputs.deb_version }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
