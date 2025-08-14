@@ -98,9 +98,9 @@ jobs:
         id: out
         run: |
           set -euo pipefail
-          echo "codename=${{ steps.debian.outputs.codename }}" >> "$GITHUB_OUTPUT"
-          echo "deb_version=${{ steps.ovpn.outputs.deb_version }}" >> "$GITHUB_OUTPUT"
-          echo "safe_deb_version=${{ steps.ovpn.outputs.safe_deb_version }}" >> "$GITHUB_OUTPUT"
+          echo "codename=${{ steps.debian-version.outputs.codename }}" >> "$GITHUB_OUTPUT"
+          echo "deb_version=${{ steps.openvpn-version.outputs.deb_version }}" >> "$GITHUB_OUTPUT"
+          echo "safe_deb_version=${{ steps.openvpn-version.outputs.safe_deb_version }}" >> "$GITHUB_OUTPUT"
           echo "primary=${{ steps.tags.outputs.primary }}"   >> "$GITHUB_OUTPUT"
           echo "compat1=${{ steps.tags.outputs.compat1 }}"   >> "$GITHUB_OUTPUT"
           echo "compat2=${{ steps.tags.outputs.compat2 }}"   >> "$GITHUB_OUTPUT"
