@@ -30,10 +30,11 @@ RUN apt-get update && apt-get -y build-dep openvpn
 
 WORKDIR /src
 RUN dget -u https://deb.debian.org/debian/pool/main/o/openvpn/openvpn_${OPENVPN_VERSION}.dsc
-WORKDIR /src/openvpn-${OPENVPN_VERSION}
 
 # Patch: bump USER_PASS_LEN for very long creds
-RUN export QUILT_PATCHES=debian/patches && \
+RUN set -eux; \
+    cd /src/openvpn-[0-9]*; \
+    export QUILT_PATCHES=debian/patches && \
     quilt new long-passlen.patch && \
     quilt add src/openvpn/misc.h && \
     sed -i 's/#define USER_PASS_LEN 128/#define USER_PASS_LEN (1 << 17)/' src/openvpn/misc.h && \
@@ -45,12 +46,15 @@ ENV DEBFULLNAME="Guillaume Filion" \
     DEBCHANGE_EDITOR="/bin/true"
 
 # bump version: 2.6.14-1 → 2.6.14-1+longpass1
-RUN dch -l +longpass1 -D ${DEBIAN_SUITE} -u low \
-  "Increase USER_PASS_LEN to support >128-char passwords." \
- && dpkg-parsechangelog -S Version | grep -q '+longpass1'
+RUN set -eux; \
+    cd /src/openvpn-[0-9]*; \
+    dch -l +longpass1 -D ${DEBIAN_SUITE} -u low "Increase USER_PASS_LEN to support >128-char passwords."; \
+    dpkg-parsechangelog -S Version | grep -q '+longpass1'
 
 # Build unsigned binaries (binary packages only)
-RUN dpkg-buildpackage -us -uc -b
+RUN set -eux; \
+    cd /src/openvpn-[0-9]*; \
+    dpkg-buildpackage -us -uc -b
 
 # ---------- runtime (${BASE_SUITE}, dperson UX) ----------
 ARG BASE_SUITE
