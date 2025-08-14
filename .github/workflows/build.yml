@@ -42,6 +42,9 @@ jobs:
           load: true
           push: false
           tags: current-build
+          build-args: |
+            DEBIAN_SUITE=${{ steps.debian-version.outputs.codename }}
+            OPENVPN_VERSION=${{ steps.openvpn-version.outputs.deb_version }}
 
       - name: Detect Debian stable codename
         id: debian-version
