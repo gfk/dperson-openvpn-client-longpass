@@ -1,7 +1,7 @@
-# openvpn-client-longpass (Debian)
+# dperson-openvpn-client-longpass (Debian)
 
 Drop-in replacement for [`dperson/openvpn-client`](https://github.com/dperson/openvpn-client) that accepts **username/passwords >128 chars**.  
-Built from **Debian’s OpenVPN source** (`2.6.14-1`) with a tiny patch that bumps `USER_PASS_LEN`, packaged as a `.deb`, and run with the original `openvpn.sh` UX.
+Built from **Debian’s OpenVPN source** with a tiny patch that bumps `USER_PASS_LEN`, packaged as a `.deb`, and run with the original `openvpn.sh` UX.
 
 > **Why?** Some providers (like [**1NCE**](https://help.1nce.com/dev-hub/docs/vpn-service-features-limitations#vpn-client-password-length)) issue JWT-based client passwords that exceed OpenVPN’s stock 127-char limit, which causes `AUTH_FAILED`. This image removes that client-side limit while keeping the familiar dperson workflow.
 
@@ -11,21 +11,21 @@ Built from **Debian’s OpenVPN source** (`2.6.14-1`) with a tiny patch that bum
 
 Public pull:
 ```bash
-docker pull ghcr.io/gfk/openvpn-client-longpass:latest
+docker pull ghcr.io/gfk/dperson-openvpn-client-longpass:latest
 ```
 
 Use in `docker-compose.yml`:
 ```yaml
 services:
   openvpn:
-    image: ghcr.io/gfk/openvpn-client-longpass:latest
+    image: ghcr.io/gfk/dperson-openvpn-client-longpass:latest
     cap_add: [NET_ADMIN]
     devices: ["/dev/net/tun"]
     environment:
       - TZ=America/Toronto
     volumes:
-      - ./ovpn/us-west-1-client.conf:/vpn/vpn.conf:ro
-      - ./ovpn/credentials-us-west.txt:/vpn/credentials-us-west.txt:ro
+      - ./us-west-1-client.conf:/vpn/vpn.conf:ro
+      - ./credentials-us-west.txt:/vpn/credentials-us-west.txt:ro
     restart: unless-stopped
 ```
 
@@ -39,37 +39,21 @@ services:
 
 ---
 
-## Image at a glance
-
-- Base: `debian:trixie-slim`
-- OpenVPN: `2.6.14-1+longpass1` (Debian packaged, patched)
-- Entrypoint: original `openvpn.sh` from `dperson/openvpn-client`
-- Extras:
-  - `procps` (`ps`)
-  - `psmisc` (`killall`)
-  - `vpn` group for `sg vpn -c`
-  - `rt_tables` entry `200 vpn` to silence FIB warnings
-
-Requires: `--cap-add=NET_ADMIN` and `/dev/net/tun`.
-
----
-
-## Quick start (local build)
+## Local build (if you need it on a platform other than amd64 or arm64)
 
 ```yaml
 services:
   openvpn:
     build:
-      context: ./ovpn
       dockerfile: Dockerfile
-    image: local/openvpn-client-longpass:latest
+    image: local/dperson-openvpn-client-longpass:latest
     cap_add: [NET_ADMIN]
     devices: ["/dev/net/tun"]
     environment:
       - TZ=America/Toronto
     volumes:
-      - ./ovpn/us-west-1-client.conf:/vpn/vpn.conf:ro
-      - ./ovpn/credentials-us-west.txt:/vpn/credentials-us-west.txt:ro
+      - ./us-west-1-client.conf:/vpn/vpn.conf:ro
+      - ./credentials-us-west.txt:/vpn/credentials-us-west.txt:ro
     restart: unless-stopped
 ```
 
@@ -79,12 +63,12 @@ services:
 
 Check package version:
 ```bash
-docker run --rm ghcr.io/gfk/openvpn-client-longpass:latest   bash -lc 'dpkg -s openvpn | grep ^Version'
+docker run --rm ghcr.io/gfk/dperson-openvpn-client-longpass:latest   bash -lc 'dpkg -s openvpn | grep ^Version'
 ```
 
 Check OpenVPN version:
 ```bash
-docker run --rm ghcr.io/gfk/openvpn-client-longpass:latest /usr/sbin/openvpn --version
+docker run --rm ghcr.io/gfk/dperson-openvpn-client-longpass:latest /usr/sbin/openvpn --version
 ```
 
 ---
@@ -92,7 +76,7 @@ docker run --rm ghcr.io/gfk/openvpn-client-longpass:latest /usr/sbin/openvpn --v
 ## Using the dperson flags (unchanged)
 
 ```bash
-docker run --rm --cap-add=NET_ADMIN --device /dev/net/tun   -v $PWD/ovpn:/vpn   ghcr.io/gfk/openvpn-client-longpass:latest   -v 'vpn.server.example;USERNAME;A_very_long_password'   -r 192.168.1.0/24 -f ""
+docker run --rm --cap-add=NET_ADMIN --device /dev/net/tun   -v $PWD/ovpn:/vpn   ghcr.io/gfk/dperson-openvpn-client-longpass:latest   -v 'vpn.server.example;USERNAME;A_very_long_password'   -r 192.168.1.0/24 -f ""
 ```
 
 ---
@@ -108,6 +92,7 @@ docker run --rm --cap-add=NET_ADMIN --device /dev/net/tun   -v $PWD/ovpn:/vpn   
 ## Credits
 
 - [`dperson/openvpn-client`](https://github.com/dperson/openvpn-client) for base UX
+- [`utkuozdemir/dperson-openvpn-client`](https://github.com/utkuozdemir/dperson-openvpn-client) for the inspiration about the automated build with the latest versions 
 - OpenVPN & Debian maintainers
 - Motivation: connecting to **1NCE VPN** service with JWT credentials >128 chars
 
