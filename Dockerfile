@@ -20,8 +20,8 @@ deb-src http://security.debian.org/debian-security ${DEBIAN_SUITE}-security main
 deb http://deb.debian.org/debian ${DEBIAN_SUITE}-updates main
 deb-src http://deb.debian.org/debian ${DEBIAN_SUITE}-updates main
 EOF
-    apt-get update; \
-    apt-get -y build-dep openvpn
+
+RUN apt-get update && apt-get -y build-dep openvpn
 
 WORKDIR /src
 RUN dget -u https://deb.debian.org/debian/pool/main/o/openvpn/openvpn_${OPENVPN_VERSION}.dsc
