@@ -1,0 +1,81 @@
+ARG ALPINE_VERSION=3.22
+ARG ALPINE_BRANCH=3.22-stable
+
+# ---------- build custom .apk from aports (non-root) ----------
+FROM alpine:${ALPINE_VERSION} AS apkbuild
+ARG ALPINE_BRANCH
+
+# tooling + sudo
+RUN apk add --no-cache alpine-sdk abuild git sudo
+
+# ensure main + community are enabled (some images comment community)
+RUN set -eux; \
+    sed -i 's|^#\(https://dl-cdn.alpinelinux.org/alpine/.*/community\)|\1|' /etc/apk/repositories; \
+    apk update
+
+# unprivileged packager
+RUN adduser -D -h /home/builder builder \
+ && addgroup builder abuild \
+ && addgroup builder wheel \
+ && echo '%wheel ALL=(ALL) NOPASSWD:ALL' >/etc/sudoers.d/wheel
+
+USER builder
+WORKDIR /home/builder
+
+# aports for the chosen branch (match base version for fewer surprises)
+RUN git clone --depth=1 -b "${ALPINE_BRANCH}" https://gitlab.alpinelinux.org/alpine/aports.git
+
+WORKDIR /home/builder/aports/main/openvpn
+
+# bump pkgrel, ensure options, inject our sed into prepare()
+RUN set -eux; \
+  old_rel="$(awk -F= '/^pkgrel=/{print $2; exit}' APKBUILD || echo 0)"; \
+  new_rel="$((old_rel + 1))"; \
+  sed -i "s/^pkgrel=.*/pkgrel=${new_rel}/" APKBUILD; \
+  grep -q '^options=' APKBUILD || echo 'options="!check"' >> APKBUILD; \
+  if grep -q '^prepare[[:space:]]*()' APKBUILD; then \
+    awk 'BEGIN{done=0} {print} /^prepare[[:space:]]*\(\)[[:space:]]*\{$/ && !done { \
+      print "    default_prepare"; \
+      print "    sed -i '\''s/#define USER_PASS_LEN 128/#define USER_PASS_LEN (1 << 17)/'\'' src/openvpn/misc.h"; \
+      done=1 }' APKBUILD > APKBUILD.tmp && mv APKBUILD.tmp APKBUILD; \
+  else \
+    printf '\nprepare() {\n    default_prepare\n    sed -i '\''s/#define USER_PASS_LEN 128/#define USER_PASS_LEN (1 << 17)/'\'' src/openvpn/misc.h\n}\n' >> APKBUILD; \
+  fi
+
+# keygen, trust pubkey, install makedepends into the current root, then build with fakeroot (no chroot)
+RUN set -eux; \
+  abuild-keygen -a -n -q; \
+  sudo install -D -m 0644 /home/builder/.abuild/*.rsa.pub /etc/apk/keys/$(basename /home/builder/.abuild/*.rsa.pub); \
+  echo "PACKAGER_PRIVKEY=$(ls /home/builder/.abuild/*.rsa)" > /home/builder/.abuild/abuild.conf; \
+  abuild checksum; \
+  abuild deps; \
+  abuild -F; \
+  # --- gather the artifact to a stable path ---
+  mkdir -p /home/builder/out; \
+  PKG="$(find /home/builder/packages -type f -name 'openvpn-[0-9]*.apk' | head -n1)"; \
+  test -n "$PKG"; \
+  cp "$PKG" /home/builder/out/; \
+  cp /home/builder/.abuild/*.rsa.pub /home/builder/out/
+
+# ---------- minimal runtime (unchanged) ----------
+FROM alpine:${ALPINE_VERSION}
+LABEL maintainer="Guillaume Filion <guillaume@filion.org>"
+
+RUN apk add --no-cache \
+      bash ca-certificates tzdata iproute2 \
+      openssl lzo lz4 libcap-ng tini
+
+RUN addgroup -S vpn && adduser -S -G vpn -s /sbin/nologin vpn \
+ && install -d -m 0750 -o root -g vpn /vpn \
+ && mkdir -p /etc/iproute2 \
+ && { grep -Eq '^[[:space:]]*200[[:space:]]+vpn$' /etc/iproute2/rt_tables 2>/dev/null || echo '200 vpn' >> /etc/iproute2/rt_tables; }
+
+# bring in the compiled OpenVPN .apk
+COPY --from=apkbuild /home/builder/out/*.rsa.pub /etc/apk/keys/
+COPY --from=apkbuild /home/builder/out/openvpn-*.apk /tmp/
+RUN apk add --no-cache /tmp/openvpn-*.apk && rm -f /tmp/openvpn-*.apk
+
+COPY openvpn.sh /openvpn.sh
+RUN chmod +x /openvpn.sh
+WORKDIR /vpn
+ENTRYPOINT ["/sbin/tini","--","/openvpn.sh"]
