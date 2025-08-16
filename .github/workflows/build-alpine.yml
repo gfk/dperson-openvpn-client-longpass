@@ -44,7 +44,6 @@ jobs:
         id: alpine-version
         run: |
           set -euo pipefail
-          # docker run --rm debian:stable-slim bash -lc 'cat /etc/os-release
           ALPINE_VERSION=$(docker run --rm alpine:latest cat /etc/os-release | \
             grep VERSION_ID | \
             awk -F'=' ' { print $NF } ' | \
@@ -57,7 +56,7 @@ jobs:
       - name: Extract openvpn version
         id: openvpn-version
         run: |
-          OPENVPN_VERSION=$(docker run --pull=never --rm current-build openvpn --version | \
+          OPENVPN_VERSION=$(docker run --rm alpine:latest apk add --no-progress openvpn >/dev/null; openvpn --version | \
             grep -o 'OpenVPN [0-9.]*' | \
             awk '{print $2}' | \
             tr -d '[:space:]')
