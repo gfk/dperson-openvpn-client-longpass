@@ -2,6 +2,7 @@ ARG ALPINE_VERSION=3.22
 ARG ALPINE_BRANCH=3.22-stable
 
 # ---------- build custom .apk from aports (non-root) ----------
+ARG ALPINE_VERSION
 FROM alpine:${ALPINE_VERSION} AS apkbuild
 ARG ALPINE_BRANCH
 
@@ -58,6 +59,7 @@ RUN set -eux; \
   cp /home/builder/.abuild/*.rsa.pub /home/builder/out/
 
 # ---------- minimal runtime (unchanged) ----------
+ARG ALPINE_VERSION
 FROM alpine:${ALPINE_VERSION}
 LABEL maintainer="Guillaume Filion <guillaume@filion.org>"
 
