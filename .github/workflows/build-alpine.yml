@@ -32,6 +32,7 @@ jobs:
     runs-on: ubuntu-24.04
     outputs:
       alpine_version: ${{ steps.out.outputs.alpine_version }}
+      alpine_branch:  ${{ steps.out.outputs.alpine_branch }}
       base_digest: ${{ steps.out.outputs.base_digest }}
       apk_version: ${{ steps.out.outputs.apk_version }}
       primary: ${{ steps.out.outputs.primary }}
@@ -52,6 +53,16 @@ jobs:
           echo "Alpine stable version: $ALPINE_VERSION (BASE_DIGEST=$BASE_DIGEST)"
           echo "alpine_version=$ALPINE_VERSION" >> "$GITHUB_OUTPUT"
           echo "base_digest=$BASE_DIGEST" >> "$GITHUB_OUTPUT"
+
+      - name: Compute Alpine branch (major.minor-stable)
+        id: alpine-branch
+        run: |
+          set -euo pipefail
+          ALPINE_VERSION="${{ steps.alpine-version.outputs.alpine_version }}"
+          # Extract major.minor regardless of having a patch part
+          ALPINE_BRANCH="$(printf '%s\n' "$ALPINE_VERSION" | sed -E 's/^([0-9]+)\.([0-9]+).*/\1.\2/')-stable"
+          echo "Derived branch: $ALPINE_BRANCH"
+          echo "alpine_branch=$ALPINE_BRANCH" >> "$GITHUB_OUTPUT"
 
       - name: Extract openvpn version
         id: openvpn-version
@@ -78,6 +89,7 @@ jobs:
         run: |
           set -euo pipefail
           echo "alpine_version=${{ steps.alpine-version.outputs.alpine_version }}" >> "$GITHUB_OUTPUT"
+          echo "alpine_branch=${{ steps.alpine-branch.outputs.alpine_branch }}"    >> "$GITHUB_OUTPUT"
           echo "apk_version=${{ steps.openvpn-version.outputs.apk_version }}" >> "$GITHUB_OUTPUT"
           echo "base_digest=${{ steps.alpine-version.outputs.base_digest }}" >> "$GITHUB_OUTPUT"
           echo "primary=${{ steps.tags.outputs.primary }}"   >> "$GITHUB_OUTPUT"
@@ -123,7 +135,7 @@ jobs:
           push: true
           build-args: |
             ALPINE_VERSION=${{ needs.prepare.outputs.alpine_version }}
-            ALPINE_BRANCH=${{ needs.prepare.outputs.alpine_version }}-stable
+            ALPINE_BRANCH=${{ needs.prepare.outputs.alpine_branch }}
           tags: |
             ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:alpine-${{ needs.prepare.outputs.alpine_version }}-openvpn-${{ needs.prepare.outputs.apk_version }}-amd64
             ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ needs.prepare.outputs.apk_version }}-alpine-${{ needs.prepare.outputs.alpine_version }}-amd64
@@ -158,7 +170,7 @@ jobs:
           push: true
           build-args: |
             ALPINE_VERSION=${{ needs.prepare.outputs.alpine_version }}
-            ALPINE_BRANCH=${{ needs.prepare.outputs.alpine_version }}-stable
+            ALPINE_BRANCH=${{ needs.prepare.outputs.alpine_branch }}
           tags: |
             ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:alpine-${{ needs.prepare.outputs.alpine_version }}-openvpn-${{ needs.prepare.outputs.apk_version }}-arm64
             ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ needs.prepare.outputs.apk_version }}-alpine-${{ needs.prepare.outputs.alpine_version }}-arm64
@@ -215,7 +227,7 @@ jobs:
           set -eux
           IMG="${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}"
           ALPINE_VERSION=${{ needs.prepare.outputs.alpine_version }}
-          APK_VER='${{ needs.prepare.outputs.steps.apk_version }}'
+          APK_VER='${{ needs.prepare.outputs.apk_version }}'
 
           SRC_AMD64="$IMG:alpine-$ALPINE_VERSION-openvpn-$APK_VER-amd64"
           SRC_ARM64="$IMG:alpine-$ALPINE_VERSION-openvpn-$APK_VER-arm64"
