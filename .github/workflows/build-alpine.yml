@@ -31,7 +31,7 @@ jobs:
   prepare:
     runs-on: ubuntu-24.04
     outputs:
-      alpine-version: ${{ steps.out.outputs.alpine-version }}
+      alpine_version: ${{ steps.out.outputs.alpine_version }}
       base_digest: ${{ steps.out.outputs.base_digest }}
       apk_version: ${{ steps.out.outputs.apk_version }}
       primary: ${{ steps.out.outputs.primary }}
@@ -50,7 +50,7 @@ jobs:
             tr -d '[:space:]')
           BASE_DIGEST=$(docker manifest inspect "alpine:${ALPINE_VERSION}" | awk -F\" '/"digest":/ {print $4; exit}')
           echo "Alpine stable version: $ALPINE_VERSION (BASE_DIGEST=$BASE_DIGEST)"
-          echo "alpine-version=$ALPINE_VERSION" >> "$GITHUB_OUTPUT"
+          echo "alpine_version=$ALPINE_VERSION" >> "$GITHUB_OUTPUT"
           echo "base_digest=$BASE_DIGEST" >> "$GITHUB_OUTPUT"
 
       - name: Extract openvpn version
@@ -66,7 +66,7 @@ jobs:
         run: |
           set -euo pipefail
           IMG="${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}"
-          ALPINE_VERSION="${{ steps.alpine-version.outputs.alpine-version }}"
+          ALPINE_VERSION="${{ steps.alpine-version.outputs.alpine_version }}"
           APK_VERSION="${{ steps.openvpn-version.outputs.apk_version }}"
           echo "primary=${IMG}:alpine-${ALPINE_VERSION}-openvpn-${APK_VERSION}" >> "$GITHUB_OUTPUT"
           echo "compat1=${IMG}:${APK_VERSION}-alpine-${ALPINE_VERSION}" >> "$GITHUB_OUTPUT"
@@ -77,8 +77,9 @@ jobs:
         id: out
         run: |
           set -euo pipefail
-          echo "alpine_version=${{ steps.alpine-version.outputs.alpine-version }}" >> "$GITHUB_OUTPUT"
+          echo "alpine_version=${{ steps.alpine-version.outputs.alpine_version }}" >> "$GITHUB_OUTPUT"
           echo "apk_version=${{ steps.openvpn-version.outputs.apk_version }}" >> "$GITHUB_OUTPUT"
+          echo "base_digest=${{ steps.alpine-version.outputs.base_digest }}" >> "$GITHUB_OUTPUT"
           echo "primary=${{ steps.tags.outputs.primary }}"   >> "$GITHUB_OUTPUT"
           echo "compat1=${{ steps.tags.outputs.compat1 }}"   >> "$GITHUB_OUTPUT"
           echo "compat2=${{ steps.tags.outputs.compat2 }}"   >> "$GITHUB_OUTPUT"
