@@ -51,7 +51,7 @@ jobs:
             tr -d '[:space:]')
           BASE_DIGEST=$(docker manifest inspect "alpine:${ALPINE_VERSION}" | awk -F\" '/"digest":/ {print $4; exit}')
           echo "Alpine stable version: $ALPINE_VERSION (BASE_DIGEST=$BASE_DIGEST)"
-          echo "alpine-version=$CODENAME" >> "$GITHUB_OUTPUT"
+          echo "alpine-version=$ALPINE_VERSION" >> "$GITHUB_OUTPUT"
           echo "base_digest=$BASE_DIGEST" >> "$GITHUB_OUTPUT"
 
       - name: Extract openvpn version
