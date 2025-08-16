@@ -56,7 +56,7 @@ jobs:
       - name: Extract openvpn version
         id: openvpn-version
         run: |
-          OPENVPN_VERSION=$(docker run --rm alpine:latest apk add --no-progress openvpn >/dev/null; /usr/sbin/openvpn --version | \
+          OPENVPN_VERSION=$(docker run --rm alpine:latest apk add --no-progress openvpn; /usr/sbin/openvpn --version | \
             grep -o 'OpenVPN [0-9.]*' | \
             awk '{print $2}' | \
             tr -d '[:space:]')
