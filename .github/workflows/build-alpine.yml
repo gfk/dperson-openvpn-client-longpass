@@ -33,7 +33,7 @@ jobs:
     outputs:
       alpine-version: ${{ steps.out.outputs.alpine-version }}
       base_digest: ${{ steps.out.outputs.base_digest }}
-      apk_version: ${{ steps.out.outputs.deb_version }}
+      apk_version: ${{ steps.out.outputs.apk_version }}
       primary: ${{ steps.out.outputs.primary }}
       compat1: ${{ steps.out.outputs.compat1 }}
       compat2: ${{ steps.out.outputs.compat2 }}
@@ -122,7 +122,7 @@ jobs:
           push: true
           build-args: |
             ALPINE_VERSION=${{ needs.prepare.outputs.alpine_version }}
-            ALPINE_BRANCH="${{ needs.prepare.outputs.deb_version }}-stable"
+            ALPINE_BRANCH="${{ needs.prepare.outputs.alpine_version }}-stable"
           tags: |
             ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:alpine-${{ needs.prepare.outputs.alpine_version }}-openvpn-${{ needs.prepare.outputs.apk_version }}-amd64
             ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ needs.prepare.outputs.apk_version }}-alpine-${{ needs.prepare.outputs.alpine_version }}-amd64
@@ -157,7 +157,7 @@ jobs:
           push: true
           build-args: |
             ALPINE_VERSION=${{ needs.prepare.outputs.alpine_version }}
-            ALPINE_BRANCH="${{ needs.prepare.outputs.deb_version }}-stable"
+            ALPINE_BRANCH="${{ needs.prepare.outputs.alpine_version }}-stable"
           tags: |
             ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:alpine-${{ needs.prepare.outputs.alpine_version }}-openvpn-${{ needs.prepare.outputs.apk_version }}-arm64
             ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ needs.prepare.outputs.apk_version }}-alpine-${{ needs.prepare.outputs.alpine_version }}-arm64
@@ -192,7 +192,7 @@ jobs:
   #         push: true
   #         build-args: |
   #          ALPINE_VERSION=${{ needs.prepare.outputs.alpine_version }}
-  #          ALPINE_BRANCH="${{ needs.prepare.outputs.deb_version }}-stable"
+  #          ALPINE_BRANCH="${{ needs.prepare.outputs.alpine_version }}-stable"
   #         tags: |
   #            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:alpine-${{ needs.prepare.outputs.alpine_version }}-openvpn-${{ needs.prepare.outputs.apk_version }}-armv7
   #            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ needs.prepare.outputs.apk_version }}-alpine-${{ needs.prepare.outputs.alpine_version }}-armv7
