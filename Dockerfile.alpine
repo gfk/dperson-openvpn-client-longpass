@@ -61,14 +61,14 @@ RUN set -eux; \
 FROM alpine:${ALPINE_VERSION}
 LABEL maintainer="Guillaume Filion <guillaume@filion.org>"
 
-RUN apk add --no-cache \
-      bash ca-certificates tzdata iproute2 \
-      openssl lzo lz4 libcap-ng tini
+RUN apk --no-cache --no-progress upgrade && \
+    apk --no-cache --no-progress add \
+      bash tini shadow shadow-login \
+      iptables ip6tables
 
+# dperson conventions
 RUN addgroup -S vpn && adduser -S -G vpn -s /sbin/nologin vpn \
- && install -d -m 0750 -o root -g vpn /vpn \
- && mkdir -p /etc/iproute2 \
- && { grep -Eq '^[[:space:]]*200[[:space:]]+vpn$' /etc/iproute2/rt_tables 2>/dev/null || echo '200 vpn' >> /etc/iproute2/rt_tables; }
+ && install -d -m 0750 -o root -g vpn /vpn
 
 # bring in the compiled OpenVPN .apk
 COPY --from=apkbuild /home/builder/out/*.rsa.pub /etc/apk/keys/
