@@ -79,8 +79,7 @@ RUN groupadd -r vpn \
 COPY --from=build /src/openvpn_*_*.deb /tmp/
 RUN apt-get update && apt-get install -y /tmp/openvpn_*_*.deb && rm -rf /var/lib/apt/lists/*
 
-COPY openvpn.sh /openvpn.sh
-RUN chmod +x /openvpn.sh
+COPY --chmod=0755 openvpn.sh /openvpn.sh
 WORKDIR /vpn
 ENTRYPOINT ["/usr/bin/tini","--","/openvpn.sh"]
 
