@@ -30,6 +30,8 @@ Both versions behave identically from the user’s perspective — the only diff
 
 ## Pulling from GitHub Container Registry (GHCR)
 
+Both images are compiled with **`amd64`** and **`arm64`**.
+
 Alpine:
 ```bash
 docker pull ghcr.io/gfk/dperson-openvpn-client-longpass-alpine:latest
