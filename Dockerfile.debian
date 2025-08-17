@@ -3,6 +3,7 @@
 # Use a dedicated arg for FROM, to avoid scope collisions
 ARG BASE_SUITE=trixie
 ARG OPENVPN_VERSION=2.6.14-1
+ARG BASE_DIGEST
 
 # ---------- build (Debian packaging on ${BASE_SUITE}) ----------
 ARG BASE_SUITE
@@ -58,8 +59,10 @@ RUN set -eux; \
 
 # ---------- runtime (${BASE_SUITE}, dperson UX) ----------
 ARG BASE_SUITE
+ARG BASE_DIGEST
 FROM debian:${BASE_SUITE}-slim
-LABEL maintainer="Guillaume Filion <guillaume@filion.org>"
+LABEL maintainer="Guillaume Filion <guillaume@filion.org>" \
+      org.opencontainers.image.base.digest=$BASE_DIGEST
 ENV DEBIAN_FRONTEND=noninteractive
 
 RUN apt-get update && apt-get install -y --no-install-recommends \

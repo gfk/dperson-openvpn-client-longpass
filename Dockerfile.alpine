@@ -1,6 +1,7 @@
 # syntax=docker/dockerfile:1.7
 ARG ALPINE_VERSION=3.22
 ARG ALPINE_BRANCH=3.22-stable
+ARG BASE_DIGEST
 
 # ---------- build custom .apk from aports (non-root) ----------
 ARG ALPINE_VERSION
@@ -61,8 +62,10 @@ RUN set -eux; \
 
 # ---------- minimal runtime (unchanged) ----------
 ARG ALPINE_VERSION
+ARG BASE_DIGEST
 FROM alpine:${ALPINE_VERSION}
-LABEL maintainer="Guillaume Filion <guillaume@filion.org>"
+LABEL maintainer="Guillaume Filion <guillaume@filion.org>" \
+      org.opencontainers.image.base.digest=$BASE_DIGEST
 
 RUN apk --no-cache --no-progress upgrade && \
     apk --no-cache --no-progress add \
