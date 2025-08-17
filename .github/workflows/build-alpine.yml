@@ -98,6 +98,7 @@ jobs:
           echo "latest=${{ steps.tags.outputs.latest }}"     >> "$GITHUB_OUTPUT"
 
           IMAGE="${{ steps.tags.outputs.primary }}"
+          BASE_DIGEST="${{ steps.alpine-version.outputs.base_digest }}"
 
           if docker pull "$IMAGE" >/dev/null 2>&1; then
             REMOTE_BASE=$(docker inspect --format '{{ index .Config.Labels "org.opencontainers.image.base.digest" }}' "$IMAGE" 2>/dev/null || true)
