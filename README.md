@@ -14,15 +14,15 @@ Every week, a Github action (based on [`utkuozdemir/dperson-openvpn-client`](htt
 
 We now publish **two flavors** of this image:
 
-- **Debian-based**  
+- **Alpine-based (~19MB)**  
+  `ghcr.io/gfk/dperson-openvpn-client-longpass-alpine:latest`  
+  Built from [Alpine’s OpenVPN package sources](https://pkgs.alpinelinux.org/package/v3.22/main/x86_64/openvpn).  
+  Best choice if you want a **smaller footprint** and faster startup, with a slightly more minimal environment.
+
+- **Debian-based (~139MB)**  
   `ghcr.io/gfk/dperson-openvpn-client-longpass-debian:latest`  
   Built from the [Debian OpenVPN source package](https://tracker.debian.org/pkg/openvpn).  
   Best choice if you prefer Debian’s packaging, stability, and security updates.
-
-- **Alpine-based**  
-  `ghcr.io/gfk/dperson-openvpn-client-longpass-alpine:latest`  
-  Built from Alpine’s OpenVPN package sources.  
-  Best choice if you want a **smaller footprint** and faster startup, with a slightly more minimal environment.
 
 Both versions behave identically from the user’s perspective — the only difference is the underlying base distribution and package source.
 
@@ -30,14 +30,14 @@ Both versions behave identically from the user’s perspective — the only diff
 
 ## Pulling from GitHub Container Registry (GHCR)
 
-Debian:
-```bash
-docker pull ghcr.io/gfk/dperson-openvpn-client-longpass-debian:latest
-```
-
 Alpine:
 ```bash
 docker pull ghcr.io/gfk/dperson-openvpn-client-longpass-alpine:latest
+```
+
+Debian:
+```bash
+docker pull ghcr.io/gfk/dperson-openvpn-client-longpass-debian:latest
 ```
 
 Use in `docker-compose.yml` (example with Debian):
@@ -74,7 +74,7 @@ Switch `...-debian:latest` to `...-alpine:latest` if you want the Alpine variant
 services:
   openvpn:
     build:
-      dockerfile: Dockerfile
+      dockerfile: Dockerfile.alpine
     image: local/dperson-openvpn-client-longpass:latest
     cap_add: [NET_ADMIN]
     devices: ["/dev/net/tun"]
@@ -86,7 +86,7 @@ services:
     restart: unless-stopped
 ```
 
-For Alpine, specify `Dockerfile.alpine`. For Debian, use `Dockerfile`.
+For Alpine, specify `Dockerfile.alpine`. For Debian, use `Dockerfile.debian`.
 
 ---
 
