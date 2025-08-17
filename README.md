@@ -22,7 +22,7 @@ We now publish **two flavors** of this image:
 - **Debian-based (~139MB)**  
   `ghcr.io/gfk/dperson-openvpn-client-longpass-debian:latest`  
   Built from the [Debian OpenVPN source package](https://tracker.debian.org/pkg/openvpn).  
-  Best choice if you prefer Debian’s packaging, stability, and security updates.
+  Best choice if you prefer Debian’s packaging, stability, and security updates, or want to modify the setup.
 
 Both versions behave identically from the user’s perspective — the only difference is the underlying base distribution and package source.
 
