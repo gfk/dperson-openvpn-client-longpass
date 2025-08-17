@@ -20,7 +20,7 @@ on:
     - cron: "34 4 * * 0"
 
 concurrency:
-  group: build-${{ github.event.pull_request.number || github.ref }}
+  group: build-debian-${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
 env:
@@ -125,6 +125,7 @@ jobs:
         uses: docker/build-push-action@v5
         with:
           context: .
+          file: Dockerfile.debian
           platforms: linux/amd64
           push: true
           build-args: |
@@ -159,6 +160,7 @@ jobs:
         uses: docker/build-push-action@v5
         with:
           context: .
+          file: Dockerfile.debian
           platforms: linux/arm64
           push: true
           build-args: |

@@ -20,7 +20,7 @@ on:
     - cron: "34 4 * * 0"
 
 concurrency:
-  group: build-${{ github.event.pull_request.number || github.ref }}
+  group: build-alpine-${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
 env:
