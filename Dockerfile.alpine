@@ -62,8 +62,9 @@ RUN set -eux; \
 
 # ---------- minimal runtime (unchanged) ----------
 ARG ALPINE_VERSION
-ARG BASE_DIGEST
 FROM alpine:${ALPINE_VERSION}
+
+ARG BASE_DIGEST
 LABEL maintainer="Guillaume Filion <guillaume@filion.org>" \
       org.opencontainers.image.base.digest=$BASE_DIGEST
 
