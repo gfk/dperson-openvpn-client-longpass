@@ -15,9 +15,9 @@ on:
     paths-ignore:
       - "**.md"
       - ".gitignore"
-  # cron to run every Sunday at 04:34 UTC
+  # cron to run every night at 04:34 UTC
   schedule:
-    - cron: "34 4 * * 0"
+    - cron: "34 4 * * *"
 
 concurrency:
   group: build-debian-${{ github.workflow }}-${{ github.ref }}
