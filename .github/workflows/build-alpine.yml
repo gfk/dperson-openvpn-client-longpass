@@ -136,27 +136,32 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Build & push (amd64)
-        uses: docker/build-push-action@v5
-        with:
-          context: .
-          file: ./Dockerfile.alpine
-          platforms: linux/amd64
-          push: true
-          build-args: |
-            ALPINE_VERSION=${{ needs.prepare.outputs.alpine_version }}
-            ALPINE_BRANCH=${{ needs.prepare.outputs.alpine_branch }}
-            BASE_DIGEST=${{ needs.prepare.outputs.base_digest_amd64 }}
-          tags: |
-            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:alpine-${{ needs.prepare.outputs.alpine_version }}-openvpn-${{ needs.prepare.outputs.apk_version }}-amd64
-            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ needs.prepare.outputs.apk_version }}-alpine-${{ needs.prepare.outputs.alpine_version }}-amd64
-            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ needs.prepare.outputs.apk_version }}-amd64
-          labels: |
-            org.opencontainers.image.version=${{ needs.prepare.outputs.apk_version }}
-            org.opencontainers.image.base.name=alpine:${{ needs.prepare.outputs.alpine_version }}
-            org.opencontainers.image.ref.name=openvpn=${{ needs.prepare.outputs.apk_version }}
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
+        - name: Build & push (amd64)
+          uses: docker/build-push-action@v5
+          with:
+            context: .
+            file: ./Dockerfile.alpine
+            platforms: linux/amd64
+            push: true
+            build-args: |
+              ALPINE_VERSION=${{ needs.prepare.outputs.alpine_version }}
+              ALPINE_BRANCH=${{ needs.prepare.outputs.alpine_branch }}
+              BASE_DIGEST=${{ needs.prepare.outputs.base_digest_amd64 }}
+            tags: |
+              ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:alpine-${{ needs.prepare.outputs.alpine_version }}-openvpn-${{ needs.prepare.outputs.apk_version }}-amd64
+              ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ needs.prepare.outputs.apk_version }}-alpine-${{ needs.prepare.outputs.alpine_version }}-amd64
+              ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ needs.prepare.outputs.apk_version }}-amd64
+            labels: |
+              org.opencontainers.image.version=${{ needs.prepare.outputs.apk_version }}
+              org.opencontainers.image.base.name=alpine:${{ needs.prepare.outputs.alpine_version }}
+              org.opencontainers.image.ref.name=openvpn=${{ needs.prepare.outputs.apk_version }}
+            cache-from: type=gha
+            cache-to: type=gha,mode=max
+
+        - name: Test OpenVPN version (amd64)
+          uses: ./.github/actions/openvpn-version-test
+          with:
+            image: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:alpine-${{ needs.prepare.outputs.alpine_version }}-openvpn-${{ needs.prepare.outputs.apk_version }}-amd64
 
   build-arm64:
     needs: prepare
@@ -171,27 +176,32 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Build & push (arm64)
-        uses: docker/build-push-action@v5
-        with:
-          context: .
-          file: ./Dockerfile.alpine
-          platforms: linux/arm64
-          push: true
-          build-args: |
-            ALPINE_VERSION=${{ needs.prepare.outputs.alpine_version }}
-            ALPINE_BRANCH=${{ needs.prepare.outputs.alpine_branch }}
-            BASE_DIGEST=${{ needs.prepare.outputs.base_digest_arm64 }}
-          tags: |
-            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:alpine-${{ needs.prepare.outputs.alpine_version }}-openvpn-${{ needs.prepare.outputs.apk_version }}-arm64
-            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ needs.prepare.outputs.apk_version }}-alpine-${{ needs.prepare.outputs.alpine_version }}-arm64
-            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ needs.prepare.outputs.apk_version }}-arm64
-          labels: |
-            org.opencontainers.image.version=${{ needs.prepare.outputs.apk_version }}
-            org.opencontainers.image.base.name=alpine:${{ needs.prepare.outputs.alpine_version }}
-            org.opencontainers.image.ref.name=openvpn=${{ needs.prepare.outputs.apk_version }}
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
+        - name: Build & push (arm64)
+          uses: docker/build-push-action@v5
+          with:
+            context: .
+            file: ./Dockerfile.alpine
+            platforms: linux/arm64
+            push: true
+            build-args: |
+              ALPINE_VERSION=${{ needs.prepare.outputs.alpine_version }}
+              ALPINE_BRANCH=${{ needs.prepare.outputs.alpine_branch }}
+              BASE_DIGEST=${{ needs.prepare.outputs.base_digest_arm64 }}
+            tags: |
+              ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:alpine-${{ needs.prepare.outputs.alpine_version }}-openvpn-${{ needs.prepare.outputs.apk_version }}-arm64
+              ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ needs.prepare.outputs.apk_version }}-alpine-${{ needs.prepare.outputs.alpine_version }}-arm64
+              ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ needs.prepare.outputs.apk_version }}-arm64
+            labels: |
+              org.opencontainers.image.version=${{ needs.prepare.outputs.apk_version }}
+              org.opencontainers.image.base.name=alpine:${{ needs.prepare.outputs.alpine_version }}
+              org.opencontainers.image.ref.name=openvpn=${{ needs.prepare.outputs.apk_version }}
+            cache-from: type=gha
+            cache-to: type=gha,mode=max
+
+        - name: Test OpenVPN version (arm64)
+          uses: ./.github/actions/openvpn-version-test
+          with:
+            image: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:alpine-${{ needs.prepare.outputs.alpine_version }}-openvpn-${{ needs.prepare.outputs.apk_version }}-arm64
 
   # Optional: keep a slow QEMU build for arm/v7 (Raspberry Pi OS 32-bit)
   # build-armv7:

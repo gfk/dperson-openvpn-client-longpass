@@ -1,0 +1,16 @@
+name: Verify OpenVPN version suffix
+inputs:
+  image:
+    description: Docker image reference to test
+    required: true
+  suffix:
+    description: Expected suffix in OpenVPN version
+    required: false
+    default: longpass1
+runs:
+  using: composite
+  steps:
+    - shell: bash
+      run: |
+        set -euo pipefail
+        docker run --rm "${{ inputs.image }}" openvpn --version | head -n1 | grep -q "${{ inputs.suffix }}"
