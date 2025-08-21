@@ -33,7 +33,8 @@ jobs:
     outputs:
       alpine_version: ${{ steps.out.outputs.alpine_version }}
       alpine_branch:  ${{ steps.out.outputs.alpine_branch }}
-      base_digest: ${{ steps.out.outputs.base_digest }}
+      base_digest_amd64: ${{ steps.out.outputs.base_digest_amd64 }}
+      base_digest_arm64: ${{ steps.out.outputs.base_digest_arm64 }}
       apk_version: ${{ steps.out.outputs.apk_version }}
       primary: ${{ steps.out.outputs.primary }}
       compat1: ${{ steps.out.outputs.compat1 }}
@@ -49,10 +50,13 @@ jobs:
             grep VERSION_ID | \
             awk -F'=' ' { print $NF } ' | \
             tr -d '[:space:]')
-          BASE_DIGEST=$(docker manifest inspect "alpine:${ALPINE_VERSION}" | awk -F\" '/"digest":/ {print $4; exit}')
-          echo "Alpine stable version: $ALPINE_VERSION (BASE_DIGEST=$BASE_DIGEST)"
+          BASE_JSON=$(docker manifest inspect "alpine:${ALPINE_VERSION}")
+          BASE_DIGEST_AMD64=$(printf '%s' "$BASE_JSON" | python -c 'import json,sys; m=json.load(sys.stdin); print([d["digest"] for d in m["manifests"] if d["platform"]["architecture"]=="amd64"][0])')
+          BASE_DIGEST_ARM64=$(printf '%s' "$BASE_JSON" | python -c 'import json,sys; m=json.load(sys.stdin); print([d["digest"] for d in m["manifests"] if d["platform"]["architecture"]=="arm64"][0])')
+          echo "Alpine stable version: $ALPINE_VERSION (BASE_DIGEST_AMD64=$BASE_DIGEST_AMD64; BASE_DIGEST_ARM64=$BASE_DIGEST_ARM64)"
           echo "alpine_version=$ALPINE_VERSION" >> "$GITHUB_OUTPUT"
-          echo "base_digest=$BASE_DIGEST" >> "$GITHUB_OUTPUT"
+          echo "base_digest_amd64=$BASE_DIGEST_AMD64" >> "$GITHUB_OUTPUT"
+          echo "base_digest_arm64=$BASE_DIGEST_ARM64" >> "$GITHUB_OUTPUT"
 
       - name: Compute Alpine branch (major.minor-stable)
         id: alpine-branch
@@ -91,17 +95,22 @@ jobs:
           echo "alpine_version=${{ steps.alpine-version.outputs.alpine_version }}" >> "$GITHUB_OUTPUT"
           echo "alpine_branch=${{ steps.alpine-branch.outputs.alpine_branch }}"    >> "$GITHUB_OUTPUT"
           echo "apk_version=${{ steps.openvpn-version.outputs.apk_version }}" >> "$GITHUB_OUTPUT"
-          echo "base_digest=${{ steps.alpine-version.outputs.base_digest }}" >> "$GITHUB_OUTPUT"
           echo "primary=${{ steps.tags.outputs.primary }}"   >> "$GITHUB_OUTPUT"
           echo "compat1=${{ steps.tags.outputs.compat1 }}"   >> "$GITHUB_OUTPUT"
           echo "compat2=${{ steps.tags.outputs.compat2 }}"   >> "$GITHUB_OUTPUT"
           echo "latest=${{ steps.tags.outputs.latest }}"     >> "$GITHUB_OUTPUT"
+          echo "base_digest_amd64=${{ steps.alpine-version.outputs.base_digest_amd64 }}" >> "$GITHUB_OUTPUT"
+          echo "base_digest_arm64=${{ steps.alpine-version.outputs.base_digest_arm64 }}" >> "$GITHUB_OUTPUT"
 
           IMAGE="${{ steps.tags.outputs.primary }}"
-          BASE_DIGEST="${{ steps.alpine-version.outputs.base_digest }}"
+          BASE_DIGEST="${{ steps.alpine-version.outputs.base_digest_amd64 }}"
 
           if docker pull "$IMAGE" >/dev/null 2>&1; then
-            REMOTE_BASE=$(docker inspect --format '{{ index .Config.Labels "org.opencontainers.image.base.digest" }}' "$IMAGE" 2>/dev/null || true)
+            DIGEST=$(docker image inspect "$IMAGE" --format '{{ index .RepoDigests 0 }}' 2>/dev/null || true)
+            REMOTE_BASE=""
+            if [ -n "$DIGEST" ]; then
+              REMOTE_BASE=$(docker image inspect "$DIGEST" --format '{{ index .Config.Labels "org.opencontainers.image.base.digest" }}' 2>/dev/null || true)
+            fi
             echo "Image already exists, digest: $REMOTE_BASE"
           else
             echo "Image does not exist"
@@ -137,6 +146,7 @@ jobs:
           build-args: |
             ALPINE_VERSION=${{ needs.prepare.outputs.alpine_version }}
             ALPINE_BRANCH=${{ needs.prepare.outputs.alpine_branch }}
+            BASE_DIGEST=${{ needs.prepare.outputs.base_digest_amd64 }}
           tags: |
             ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:alpine-${{ needs.prepare.outputs.alpine_version }}-openvpn-${{ needs.prepare.outputs.apk_version }}-amd64
             ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ needs.prepare.outputs.apk_version }}-alpine-${{ needs.prepare.outputs.alpine_version }}-amd64
@@ -144,7 +154,6 @@ jobs:
           labels: |
             org.opencontainers.image.version=${{ needs.prepare.outputs.apk_version }}
             org.opencontainers.image.base.name=alpine:${{ needs.prepare.outputs.alpine_version }}
-            org.opencontainers.image.base.digest=${{ needs.prepare.outputs.base_digest }}
             org.opencontainers.image.ref.name=openvpn=${{ needs.prepare.outputs.apk_version }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
@@ -172,6 +181,7 @@ jobs:
           build-args: |
             ALPINE_VERSION=${{ needs.prepare.outputs.alpine_version }}
             ALPINE_BRANCH=${{ needs.prepare.outputs.alpine_branch }}
+            BASE_DIGEST=${{ needs.prepare.outputs.base_digest_arm64 }}
           tags: |
             ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:alpine-${{ needs.prepare.outputs.alpine_version }}-openvpn-${{ needs.prepare.outputs.apk_version }}-arm64
             ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ needs.prepare.outputs.apk_version }}-alpine-${{ needs.prepare.outputs.alpine_version }}-arm64
@@ -179,7 +189,6 @@ jobs:
           labels: |
             org.opencontainers.image.version=${{ needs.prepare.outputs.apk_version }}
             org.opencontainers.image.base.name=alpine:${{ needs.prepare.outputs.alpine_version }}
-            org.opencontainers.image.base.digest=${{ needs.prepare.outputs.base_digest }}
             org.opencontainers.image.ref.name=openvpn=${{ needs.prepare.outputs.apk_version }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
