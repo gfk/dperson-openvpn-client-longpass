@@ -39,6 +39,10 @@ RUN set -eux; \
     quilt new long-passlen.patch && \
     quilt add src/openvpn/misc.h && \
     sed -i 's/#define USER_PASS_LEN 128/#define USER_PASS_LEN (1 << 17)/' src/openvpn/misc.h && \
+    quilt refresh && \
+    quilt new version-suffix.patch && \
+    quilt add version.m4 && \
+    sed -i '/define(\[PRODUCT_VERSION_PATCH\]/ s/])/-longpass1])/' version.m4 && \
     quilt refresh
 
 # set maintainer info for dch
