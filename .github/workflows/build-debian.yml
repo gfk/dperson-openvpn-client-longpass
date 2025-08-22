@@ -132,32 +132,32 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-        - name: Build & push (amd64)
-          uses: docker/build-push-action@v5
-          with:
-            context: .
-            file: Dockerfile.debian
-            platforms: linux/amd64
-            push: true
-            build-args: |
-              BASE_SUITE=${{ needs.prepare.outputs.codename }}
-              OPENVPN_VERSION=${{ needs.prepare.outputs.deb_version }}
-              BASE_DIGEST=${{ needs.prepare.outputs.base_digest_amd64 }}
-            tags: |
-              ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:debian-${{ needs.prepare.outputs.codename }}-openvpn-${{ needs.prepare.outputs.safe_deb_version }}-amd64
-              ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ needs.prepare.outputs.safe_deb_version }}-debian-${{ needs.prepare.outputs.codename }}-amd64
-              ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ needs.prepare.outputs.safe_deb_version }}-amd64
-            labels: |
-              org.opencontainers.image.version=${{ needs.prepare.outputs.deb_version }}
-              org.opencontainers.image.base.name=debian:${{ needs.prepare.outputs.codename }}-slim
-              org.opencontainers.image.ref.name=openvpn=${{ needs.prepare.outputs.deb_version }}
-            cache-from: type=gha
-            cache-to: type=gha,mode=max
+      - name: Build & push (amd64)
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: Dockerfile.debian
+          platforms: linux/amd64
+          push: true
+          build-args: |
+            BASE_SUITE=${{ needs.prepare.outputs.codename }}
+            OPENVPN_VERSION=${{ needs.prepare.outputs.deb_version }}
+            BASE_DIGEST=${{ needs.prepare.outputs.base_digest_amd64 }}
+          tags: |
+            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:debian-${{ needs.prepare.outputs.codename }}-openvpn-${{ needs.prepare.outputs.safe_deb_version }}-amd64
+            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ needs.prepare.outputs.safe_deb_version }}-debian-${{ needs.prepare.outputs.codename }}-amd64
+            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ needs.prepare.outputs.safe_deb_version }}-amd64
+          labels: |
+            org.opencontainers.image.version=${{ needs.prepare.outputs.deb_version }}
+            org.opencontainers.image.base.name=debian:${{ needs.prepare.outputs.codename }}-slim
+            org.opencontainers.image.ref.name=openvpn=${{ needs.prepare.outputs.deb_version }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
 
-        - name: Test OpenVPN version (amd64)
-          uses: ./.github/actions/openvpn-version-test
-          with:
-            image: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:debian-${{ needs.prepare.outputs.codename }}-openvpn-${{ needs.prepare.outputs.safe_deb_version }}-amd64
+      - name: Test OpenVPN version (amd64)
+        uses: ./.github/actions/openvpn-version-test
+        with:
+          image: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:debian-${{ needs.prepare.outputs.codename }}-openvpn-${{ needs.prepare.outputs.safe_deb_version }}-amd64
 
   build-arm64:
     needs: prepare
@@ -172,32 +172,32 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-        - name: Build & push (arm64)
-          uses: docker/build-push-action@v5
-          with:
-            context: .
-            file: Dockerfile.debian
-            platforms: linux/arm64
-            push: true
-            build-args: |
-              BASE_SUITE=${{ needs.prepare.outputs.codename }}
-              OPENVPN_VERSION=${{ needs.prepare.outputs.deb_version }}
-              BASE_DIGEST=${{ needs.prepare.outputs.base_digest_arm64 }}
-            tags: |
-              ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:debian-${{ needs.prepare.outputs.codename }}-openvpn-${{ needs.prepare.outputs.safe_deb_version }}-arm64
-              ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ needs.prepare.outputs.safe_deb_version }}-debian-${{ needs.prepare.outputs.codename }}-arm64
-              ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ needs.prepare.outputs.safe_deb_version }}-arm64
-            labels: |
-              org.opencontainers.image.version=${{ needs.prepare.outputs.deb_version }}
-              org.opencontainers.image.base.name=debian:${{ needs.prepare.outputs.codename }}-slim
-              org.opencontainers.image.ref.name=openvpn=${{ needs.prepare.outputs.deb_version }}
-            cache-from: type=gha
-            cache-to: type=gha,mode=max
+      - name: Build & push (arm64)
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: Dockerfile.debian
+          platforms: linux/arm64
+          push: true
+          build-args: |
+            BASE_SUITE=${{ needs.prepare.outputs.codename }}
+            OPENVPN_VERSION=${{ needs.prepare.outputs.deb_version }}
+            BASE_DIGEST=${{ needs.prepare.outputs.base_digest_arm64 }}
+          tags: |
+            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:debian-${{ needs.prepare.outputs.codename }}-openvpn-${{ needs.prepare.outputs.safe_deb_version }}-arm64
+            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ needs.prepare.outputs.safe_deb_version }}-debian-${{ needs.prepare.outputs.codename }}-arm64
+            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ needs.prepare.outputs.safe_deb_version }}-arm64
+          labels: |
+            org.opencontainers.image.version=${{ needs.prepare.outputs.deb_version }}
+            org.opencontainers.image.base.name=debian:${{ needs.prepare.outputs.codename }}-slim
+            org.opencontainers.image.ref.name=openvpn=${{ needs.prepare.outputs.deb_version }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
 
-        - name: Test OpenVPN version (arm64)
-          uses: ./.github/actions/openvpn-version-test
-          with:
-            image: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:debian-${{ needs.prepare.outputs.codename }}-openvpn-${{ needs.prepare.outputs.safe_deb_version }}-arm64
+      - name: Test OpenVPN version (arm64)
+        uses: ./.github/actions/openvpn-version-test
+        with:
+          image: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:debian-${{ needs.prepare.outputs.codename }}-openvpn-${{ needs.prepare.outputs.safe_deb_version }}-arm64
 
   # Optional: keep a slow QEMU build for arm/v7 (Raspberry Pi OS 32-bit)
   # build-armv7:
@@ -263,4 +263,3 @@ jobs:
               -t "$IMG:latest" \
               "$SRC_AMD64" "$SRC_ARM64"
           fi
-
