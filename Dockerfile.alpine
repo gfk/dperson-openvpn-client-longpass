@@ -40,9 +40,10 @@ RUN set -eux; \
     awk 'BEGIN{done=0} {print} /^prepare[[:space:]]*\(\)[[:space:]]*\{$/ && !done { \
       print "    default_prepare"; \
       print "    sed -i '\''s/#define USER_PASS_LEN 128/#define USER_PASS_LEN (1 << 17)/'\'' src/openvpn/misc.h"; \
+      print "    sed -i '\''/PACKAGE_STRING/ s/$/ \"-longpass1\"/'\'' src/openvpn/options.c"; \
       done=1 }' APKBUILD > APKBUILD.tmp && mv APKBUILD.tmp APKBUILD; \
   else \
-    printf '\nprepare() {\n    default_prepare\n    sed -i '\''s/#define USER_PASS_LEN 128/#define USER_PASS_LEN (1 << 17)/'\'' src/openvpn/misc.h\n}\n' >> APKBUILD; \
+    printf '\nprepare() {\n    default_prepare\n    sed -i '\''s/#define USER_PASS_LEN 128/#define USER_PASS_LEN (1 << 17)/'\'' src/openvpn/misc.h\n    sed -i '\''/PACKAGE_STRING/ s/$/ "-longpass1"/'\'' src/openvpn/options.c\n}\n' >> APKBUILD; \
   fi
 
 # keygen, trust pubkey, install makedepends into the current root, then build with fakeroot (no chroot)

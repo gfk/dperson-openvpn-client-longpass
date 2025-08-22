@@ -158,6 +158,11 @@ jobs:
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
+      - name: Test OpenVPN version (amd64)
+        uses: ./.github/actions/openvpn-version-test
+        with:
+          image: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:alpine-${{ needs.prepare.outputs.alpine_version }}-openvpn-${{ needs.prepare.outputs.apk_version }}-amd64
+
   build-arm64:
     needs: prepare
     if: needs.prepare.outputs.should_build == 'true'
@@ -192,6 +197,11 @@ jobs:
             org.opencontainers.image.ref.name=openvpn=${{ needs.prepare.outputs.apk_version }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
+
+      - name: Test OpenVPN version (arm64)
+        uses: ./.github/actions/openvpn-version-test
+        with:
+          image: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:alpine-${{ needs.prepare.outputs.alpine_version }}-openvpn-${{ needs.prepare.outputs.apk_version }}-arm64
 
   # Optional: keep a slow QEMU build for arm/v7 (Raspberry Pi OS 32-bit)
   # build-armv7:
