@@ -136,13 +136,14 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Build & push (amd64)
+      - name: Build (amd64)
         uses: docker/build-push-action@v5
         with:
           context: .
           file: ./Dockerfile.alpine
           platforms: linux/amd64
-          push: true
+          push: false
+          load: true
           build-args: |
             ALPINE_VERSION=${{ needs.prepare.outputs.alpine_version }}
             ALPINE_BRANCH=${{ needs.prepare.outputs.alpine_branch }}
@@ -163,6 +164,12 @@ jobs:
         with:
           image: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:alpine-${{ needs.prepare.outputs.alpine_version }}-openvpn-${{ needs.prepare.outputs.apk_version }}-amd64
 
+      - name: Push image (amd64)
+        run: |
+          docker push ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:alpine-${{ needs.prepare.outputs.alpine_version }}-openvpn-${{ needs.prepare.outputs.apk_version }}-amd64
+          docker push ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ needs.prepare.outputs.apk_version }}-alpine-${{ needs.prepare.outputs.alpine_version }}-amd64
+          docker push ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ needs.prepare.outputs.apk_version }}-amd64
+
   build-arm64:
     needs: prepare
     if: needs.prepare.outputs.should_build == 'true'
@@ -176,13 +183,14 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Build & push (arm64)
+      - name: Build (arm64)
         uses: docker/build-push-action@v5
         with:
           context: .
           file: ./Dockerfile.alpine
           platforms: linux/arm64
-          push: true
+          push: false
+          load: true
           build-args: |
             ALPINE_VERSION=${{ needs.prepare.outputs.alpine_version }}
             ALPINE_BRANCH=${{ needs.prepare.outputs.alpine_branch }}
@@ -202,6 +210,12 @@ jobs:
         uses: ./.github/actions/openvpn-version-test
         with:
           image: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:alpine-${{ needs.prepare.outputs.alpine_version }}-openvpn-${{ needs.prepare.outputs.apk_version }}-arm64
+
+      - name: Push image (arm64)
+        run: |
+          docker push ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:alpine-${{ needs.prepare.outputs.alpine_version }}-openvpn-${{ needs.prepare.outputs.apk_version }}-arm64
+          docker push ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ needs.prepare.outputs.apk_version }}-alpine-${{ needs.prepare.outputs.alpine_version }}-arm64
+          docker push ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ needs.prepare.outputs.apk_version }}-arm64
 
   # Optional: keep a slow QEMU build for arm/v7 (Raspberry Pi OS 32-bit)
   # build-armv7:
