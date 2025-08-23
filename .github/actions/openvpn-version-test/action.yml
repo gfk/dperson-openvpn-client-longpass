@@ -13,4 +13,5 @@ runs:
     - shell: bash
       run: |
         set -euo pipefail
-        docker run --rm "${{ inputs.image }}" openvpn --version | head -n1 | grep -q "${{ inputs.suffix }}"
+        docker run --pull=never --rm --entrypoint openvpn "${{ inputs.image }}" --version |
+          head -n1 | grep -q "${{ inputs.suffix }}"
