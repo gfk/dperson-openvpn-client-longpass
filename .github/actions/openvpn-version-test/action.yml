@@ -1,3 +1,4 @@
+---
 name: Verify OpenVPN version suffix
 inputs:
   image:
@@ -13,5 +14,11 @@ runs:
     - shell: bash
       run: |
         set -euo pipefail
-        docker run --pull=never --rm --entrypoint openvpn "${{ inputs.image }}" --version |
-          head -n1 | grep -q "${{ inputs.suffix }}"
+        docker run --pull=never --rm \
+          --env SUFFIX="${{ inputs.suffix }}" \
+          --entrypoint sh "${{ inputs.image }}" -c '
+            set -e
+            openvpn --version > /tmp/version 2>&1
+            head -n1 /tmp/version
+            grep -q "$SUFFIX" /tmp/version
+          '

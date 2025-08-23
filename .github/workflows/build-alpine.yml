@@ -32,7 +32,7 @@ jobs:
     runs-on: ubuntu-24.04
     outputs:
       alpine_version: ${{ steps.out.outputs.alpine_version }}
-      alpine_branch:  ${{ steps.out.outputs.alpine_branch }}
+      alpine_branch: ${{ steps.out.outputs.alpine_branch }}
       base_digest_amd64: ${{ steps.out.outputs.base_digest_amd64 }}
       base_digest_arm64: ${{ steps.out.outputs.base_digest_arm64 }}
       apk_version: ${{ steps.out.outputs.apk_version }}
