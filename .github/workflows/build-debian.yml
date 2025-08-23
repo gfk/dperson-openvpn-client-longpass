@@ -133,6 +133,7 @@ jobs:
           password: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Build (amd64)
+        id: build
         uses: docker/build-push-action@v5
         with:
           context: .
@@ -158,7 +159,7 @@ jobs:
       - name: Test OpenVPN version (amd64)
         uses: ./.github/actions/openvpn-version-test
         with:
-          image: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:debian-${{ needs.prepare.outputs.codename }}-openvpn-${{ needs.prepare.outputs.safe_deb_version }}-amd64
+          image: ${{ steps.build.outputs.imageid }}
 
       - name: Push image (amd64)
         run: |
@@ -180,6 +181,7 @@ jobs:
           password: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Build (arm64)
+        id: build
         uses: docker/build-push-action@v5
         with:
           context: .
@@ -205,7 +207,7 @@ jobs:
       - name: Test OpenVPN version (arm64)
         uses: ./.github/actions/openvpn-version-test
         with:
-          image: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:debian-${{ needs.prepare.outputs.codename }}-openvpn-${{ needs.prepare.outputs.safe_deb_version }}-arm64
+          image: ${{ steps.build.outputs.imageid }}
 
       - name: Push image (arm64)
         run: |
