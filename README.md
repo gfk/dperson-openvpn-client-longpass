@@ -30,7 +30,7 @@ Both versions behave identically from the user’s perspective — the only diff
 
 ## Pulling from GitHub Container Registry (GHCR)
 
-Both images are compiled with **`amd64`** and **`arm64`**.
+Both images are compiled for **`amd64`** and **`arm64`**.
 
 Alpine:
 ```bash
@@ -64,8 +64,7 @@ Switch `...-debian:latest` to `...-alpine:latest` if you want the Alpine variant
 ## What’s patched
 
 - **USER_PASS_LEN** limit increased from 128 to ~128KB.
-- Debian variant includes version suffix: `2.6.14-1+longpass1` for identification.
-- Alpine variant is patched at build time.
+- OpenVPN includes version suffix: `longpass1` for identification.
 - No behavior changes except allowing long credentials.
 
 ---
