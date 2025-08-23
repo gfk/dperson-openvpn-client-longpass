@@ -132,13 +132,15 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Build & push (amd64)
+      - name: Build (amd64)
+        id: build
         uses: docker/build-push-action@v5
         with:
           context: .
           file: Dockerfile.debian
           platforms: linux/amd64
-          push: true
+          push: false
+          load: true
           build-args: |
             BASE_SUITE=${{ needs.prepare.outputs.codename }}
             OPENVPN_VERSION=${{ needs.prepare.outputs.deb_version }}
@@ -157,7 +159,13 @@ jobs:
       - name: Test OpenVPN version (amd64)
         uses: ./.github/actions/openvpn-version-test
         with:
-          image: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:debian-${{ needs.prepare.outputs.codename }}-openvpn-${{ needs.prepare.outputs.safe_deb_version }}-amd64
+          image: ${{ steps.build.outputs.imageid }}
+
+      - name: Push image (amd64)
+        run: |
+          docker push ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:debian-${{ needs.prepare.outputs.codename }}-openvpn-${{ needs.prepare.outputs.safe_deb_version }}-amd64
+          docker push ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ needs.prepare.outputs.safe_deb_version }}-debian-${{ needs.prepare.outputs.codename }}-amd64
+          docker push ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ needs.prepare.outputs.safe_deb_version }}-amd64
 
   build-arm64:
     needs: prepare
@@ -172,13 +180,15 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Build & push (arm64)
+      - name: Build (arm64)
+        id: build
         uses: docker/build-push-action@v5
         with:
           context: .
           file: Dockerfile.debian
           platforms: linux/arm64
-          push: true
+          push: false
+          load: true
           build-args: |
             BASE_SUITE=${{ needs.prepare.outputs.codename }}
             OPENVPN_VERSION=${{ needs.prepare.outputs.deb_version }}
@@ -197,7 +207,13 @@ jobs:
       - name: Test OpenVPN version (arm64)
         uses: ./.github/actions/openvpn-version-test
         with:
-          image: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:debian-${{ needs.prepare.outputs.codename }}-openvpn-${{ needs.prepare.outputs.safe_deb_version }}-arm64
+          image: ${{ steps.build.outputs.imageid }}
+
+      - name: Push image (arm64)
+        run: |
+          docker push ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:debian-${{ needs.prepare.outputs.codename }}-openvpn-${{ needs.prepare.outputs.safe_deb_version }}-arm64
+          docker push ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ needs.prepare.outputs.safe_deb_version }}-debian-${{ needs.prepare.outputs.codename }}-arm64
+          docker push ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ needs.prepare.outputs.safe_deb_version }}-arm64
 
   # Optional: keep a slow QEMU build for arm/v7 (Raspberry Pi OS 32-bit)
   # build-armv7:
