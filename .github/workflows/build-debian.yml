@@ -161,6 +161,18 @@ jobs:
         with:
           image: ${{ steps.build.outputs.imageid }}
 
+      - name: OpenVPN library linkage (ldd) test (amd64)
+        uses: ./.github/actions/openvpn-ldd-test
+        with:
+          image: ${{ steps.build.outputs.imageid }}
+          required_libs: |
+            libssl.so.3
+            libcrypto.so.3
+            liblz4.so.1
+            liblzo2.so.2
+            libcap-ng.so.0
+            libpkcs11-helper.so.1
+
       - name: Push image (amd64)
         run: |
           docker push ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:debian-${{ needs.prepare.outputs.codename }}-openvpn-${{ needs.prepare.outputs.safe_deb_version }}-amd64
@@ -206,6 +218,18 @@ jobs:
 
       - name: Test OpenVPN version (arm64)
         uses: ./.github/actions/openvpn-version-test
+        with:
+          image: ${{ steps.build.outputs.imageid }}
+          required_libs: |
+            libssl.so.3
+            libcrypto.so.3
+            liblz4.so.1
+            liblzo2.so.2
+            libcap-ng.so.0
+            libpkcs11-helper.so.1
+
+      - name: OpenVPN library linkage (ldd) test (arm64)
+        uses: ./.github/actions/openvpn-ldd-test
         with:
           image: ${{ steps.build.outputs.imageid }}
 

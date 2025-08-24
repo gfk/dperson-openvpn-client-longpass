@@ -1,0 +1,99 @@
+---
+name: Verify OpenVPN library linkage (portable ldd)
+inputs:
+  image:
+    description: Docker image reference to test
+    required: true
+  bin:
+    description: Path to the OpenVPN binary inside the image
+    required: false
+    default: /usr/sbin/openvpn
+  required_libs:
+    description: |
+      Newline-separated list of libraries that must appear in linkage output.
+      Adjust for your build (glibc vs musl paths may differ). Use basenames like libssl.so.3.
+    required: false
+    default: |
+      libssl.so.3
+      libcrypto.so.3
+      liblz4.so.1
+      liblzo2.so.2
+      libcap-ng.so.0
+  optional_libs:
+    required: false
+    description: "newline-separated optional libs (warn if missing)"
+    default: 
+runs:
+  using: composite
+  steps:
+    - shell: bash
+      run: |
+        set -euo pipefail
+
+        docker run --pull=never --rm \
+          --env BIN="${{ inputs.bin }}" \
+          --env REQ="${{ inputs.required_libs }}" \
+          --env OPT="${{ inputs.optional_libs }}" \
+          --entrypoint sh "${{ inputs.image }}" -c '
+            set -eu
+
+            BIN="${BIN:-/usr/sbin/openvpn}"
+            REQ_FILE=/tmp/req.txt
+            OPT_FILE=/tmp/opt.txt
+            printf "%s\n" "${REQ:-}" > "$REQ_FILE"
+            printf "%s\n" "${OPT:-}" > "$OPT_FILE"
+
+            echo "== Checking linkage for $BIN =="
+
+            run_ldd() {
+              if command -v ldd >/dev/null 2>&1; then
+                echo "[info] using ldd"
+                ldd "$BIN"
+                return $?
+              fi
+
+              # musl fallback: emulate ldd via runtime linker
+              # try common musl rtld locations
+              for rtld in /lib/ld-musl-*.so.1 /lib64/ld-musl-*.so.1; do
+                if [ -x "$rtld" ]; then
+                  echo "[info] using musl rtld fallback: $rtld"
+                  # LD_TRACE_LOADED_OBJECTS=1 makes musl print dependencies
+                  LD_TRACE_LOADED_OBJECTS=1 "$rtld" "$BIN"
+                  return $?
+                fi
+              done
+              echo "[error] neither ldd nor musl rtld found in image" >&2
+              return 127
+            }
+
+            if ! run_ldd > /tmp/ldd.txt 2>&1; then
+              echo "---- ldd output ----"
+              cat /tmp/ldd.txt || true
+              exit 1
+            fi
+
+            echo "---- ldd output ----"
+            cat /tmp/ldd.txt
+
+            # On glibc, missing libs show as "not found"; on musl, ldd exits non-zero instead.
+            # We already failed on non-zero, so here we only assert required libs are present.
+            echo "== assert: required libs present =="
+            missing=0
+            while IFS= read -r lib; do
+              [ -z "$lib" ] && continue
+              if ! grep -F -q "$lib" /tmp/ldd.txt; then
+                echo "Required library not linked: $lib" >&2
+                missing=$((missing+1))
+              fi
+            done < "$REQ_FILE"
+
+            echo "== warn: optional libs (may be intentionally omitted) =="
+            while IFS= read -r lib; do
+              [ -z "$lib" ] && continue
+              if ! grep -F -q "$lib" /tmp/ldd.txt; then
+                echo "Optional library not linked: $lib" >&2
+              fi
+            done < "$OPT_FILE"
+
+            [ "$missing" -eq 0 ] || exit 1
+          '
