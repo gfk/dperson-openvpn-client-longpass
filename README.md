@@ -4,7 +4,22 @@
 Drop-in replacement for [`dperson/openvpn-client`](https://github.com/dperson/openvpn-client) that accepts **username/passwords >128 chars**.  
 Built from either Debian’s or Alpine’s OpenVPN sources with a tiny patch that bumps `USER_PASS_LEN`, packaged as `.deb` or direct Alpine build, and run with the original `openvpn.sh` UX.
 
-> **Why the long password patch?** Some providers (like [**1NCE**](https://help.1nce.com/dev-hub/docs/vpn-service-features-limitations#vpn-client-password-length)) issue JWT-based client passwords that exceed OpenVPN’s stock 127-char limit, which causes `AUTH_FAILED`. This image removes that client-side limit while keeping the familiar dperson workflow.
+### Why would I need this?
+
+You might need passwords longer than 128 characters if you’re using a VPN provider or identity system that relies on **JWT tokens** (from SAML or OIDC logins) instead of static credentials.  
+Well-known cases include:
+
+- **AWS Client VPN** – SAML/OIDC identity federation returns long JWTs  
+- **Microsoft Azure VPN (OpenVPN protocol)** – Azure AD tokens often exceed 127 chars  
+- **Google Cloud integrations** with OpenVPN through OIDC/IAP  
+- [**1NCE IoT VPN service**](https://help.1nce.com/dev-hub/docs/vpn-service-features-limitations#vpn-client-password-length) – issues JWTs as client credentials  
+- **Okta, Auth0, Keycloak, ADFS, PingIdentity, etc.** when hooked into OpenVPN  
+- **OpenVPN Access Server** configured with SAML/OIDC (e.g. Google Workspace, Azure AD)  
+- **Enterprise VPNs** that integrate with external IdPs
+
+If your provider is giving you an `AUTH_FAILED` and your credentials look like a long block of base64 or JWT (`eyJhbGciOi...`), you’re very likely hitting the stock OpenVPN 127-char limit.
+
+### Nightly build if there's an upgrade from upstream
 
 Every night, a Github action (based on [`utkuozdemir/dperson-openvpn-client`](https://github.com/utkuozdemir/dperson-openvpn-client)) **checks if there's a new version of `openvpn` or the base image**, if so, it builds a new image with the latest versions. This ensures that we're always up to date and **avoid any known security vulnerabilities** without any manual intervention.
 
