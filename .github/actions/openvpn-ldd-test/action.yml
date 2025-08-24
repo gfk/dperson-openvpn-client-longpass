@@ -18,6 +18,10 @@ inputs:
       libcrypto.so.3
       liblz4.so.1
       liblzo2.so.2
+  optional_libs:
+    required: false
+    description: "newline-separated optional libs (warn if missing)"
+    default: |
       libpkcs11-helper.so.1
 runs:
   using: composite
@@ -29,11 +33,15 @@ runs:
         docker run --pull=never --rm \
           --env BIN="${{ inputs.bin }}" \
           --env REQ="${{ inputs.required_libs }}" \
+          --env OPT="${{ inputs.optional_libs }}" \
           --entrypoint sh "${{ inputs.image }}" -c '
-            set -e
+            set -eu
 
             BIN="${BIN:-/usr/sbin/openvpn}"
-            REQ="${REQ:-}"
+            REQ_FILE=/tmp/req.txt
+            OPT_FILE=/tmp/opt.txt
+            printf "%s\n" "${REQ:-}" > "$REQ_FILE"
+            printf "%s\n" "${OPT:-}" > "$OPT_FILE"
 
             echo "== Checking linkage for $BIN =="
 
@@ -54,7 +62,6 @@ runs:
                   return $?
                 fi
               done
-
               echo "[error] neither ldd nor musl rtld found in image" >&2
               return 127
             }
@@ -71,13 +78,22 @@ runs:
             # On glibc, missing libs show as "not found"; on musl, ldd exits non-zero instead.
             # We already failed on non-zero, so here we only assert required libs are present.
             echo "== assert: required libs present =="
-            RC=0
-            printf "%s\n" "$REQ" | while read -r lib; do
+            missing=0
+            while IFS= read -r lib; do
               [ -z "$lib" ] && continue
               if ! grep -F -q "$lib" /tmp/ldd.txt; then
                 echo "Required library not linked: $lib" >&2
-                RC=1
+                missing=$((missing+1))
               fi
-            done
-            exit $RC
+            done < "$REQ_FILE"
+
+            echo "== warn: optional libs (may be intentionally omitted) =="
+            while IFS= read -r lib; do
+              [ -z "$lib" ] && continue
+              if ! grep -F -q "$lib" /tmp/ldd.txt; then
+                echo "Optional library not linked: $lib" >&2
+              fi
+            done < "$OPT_FILE"
+
+            [ "$missing" -eq 0 ] || exit 1
           '
