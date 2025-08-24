@@ -169,6 +169,13 @@ jobs:
         uses: ./.github/actions/openvpn-ldd-test
         with:
           image: ${{ steps.build.outputs.imageid }}
+          required_libs: |
+            libssl.so.3
+            libcrypto.so.3
+            liblz4.so.1
+            liblzo2.so.2
+            libcap-ng.so.0
+            libpkcs11-helper.so.1
 
       - name: Push image (amd64)
         run: |
@@ -222,6 +229,13 @@ jobs:
         uses: ./.github/actions/openvpn-ldd-test
         with:
           image: ${{ steps.build.outputs.imageid }}
+          required_libs: |
+            libssl.so.3
+            libcrypto.so.3
+            liblz4.so.1
+            liblzo2.so.2
+            libcap-ng.so.0
+            libpkcs11-helper.so.1
 
       - name: Push image (arm64)
         run: |
