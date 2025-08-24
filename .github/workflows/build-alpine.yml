@@ -175,7 +175,6 @@ jobs:
             liblz4.so.1
             liblzo2.so.2
             libcap-ng.so.0
-            libpkcs11-helper.so.1
 
       - name: Push image (amd64)
         run: |
@@ -235,7 +234,6 @@ jobs:
             liblz4.so.1
             liblzo2.so.2
             libcap-ng.so.0
-            libpkcs11-helper.so.1
 
       - name: Push image (arm64)
         run: |

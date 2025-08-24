@@ -18,11 +18,11 @@ inputs:
       libcrypto.so.3
       liblz4.so.1
       liblzo2.so.2
+      libcap-ng.so.0
   optional_libs:
     required: false
     description: "newline-separated optional libs (warn if missing)"
-    default: |
-      libpkcs11-helper.so.1
+    default: 
 runs:
   using: composite
   steps:
