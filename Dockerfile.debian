@@ -13,11 +13,7 @@ ARG OPENVPN_VERSION
 ENV DEBIAN_FRONTEND=noninteractive DEB_BUILD_OPTIONS="nodoc nocheck" \
     DEBIAN_SUITE=${BASE_SUITE}
 
-# tools
-RUN apt-get update && apt-get install -y --no-install-recommends \
-    devscripts dpkg-dev quilt ca-certificates wget gnupg build-essential
-
-# enable deb-src (classic format is simplest)
+# configure deb-src and security/updates repositories, then install tools
 RUN set -eux; cat >/etc/apt/sources.list <<EOF
 deb http://deb.debian.org/debian ${DEBIAN_SUITE} main
 deb-src http://deb.debian.org/debian ${DEBIAN_SUITE} main
@@ -26,8 +22,9 @@ deb-src http://security.debian.org/debian-security ${DEBIAN_SUITE}-security main
 deb http://deb.debian.org/debian ${DEBIAN_SUITE}-updates main
 deb-src http://deb.debian.org/debian ${DEBIAN_SUITE}-updates main
 EOF
-
-RUN apt-get update && apt-get -y build-dep openvpn
+RUN apt-get update && apt-get install -y --no-install-recommends \
+        devscripts dpkg-dev quilt ca-certificates wget gnupg build-essential \
+    && apt-get -y build-dep openvpn
 
 WORKDIR /src
 RUN dget -u https://deb.debian.org/debian/pool/main/o/openvpn/openvpn_${OPENVPN_VERSION}.dsc
@@ -65,10 +62,18 @@ RUN set -eux; \
 ARG BASE_SUITE
 FROM debian:${BASE_SUITE}-slim
 
+ARG BASE_SUITE
 ARG BASE_DIGEST
 LABEL maintainer="Guillaume Filion <guillaume@filion.org>" \
       org.opencontainers.image.base.digest=$BASE_DIGEST
-ENV DEBIAN_FRONTEND=noninteractive
+ENV DEBIAN_FRONTEND=noninteractive DEBIAN_SUITE=${BASE_SUITE}
+
+# enable security and updates repositories
+RUN set -eux; cat >/etc/apt/sources.list <<EOF
+deb http://deb.debian.org/debian ${DEBIAN_SUITE} main
+deb http://security.debian.org/debian-security ${DEBIAN_SUITE}-security main
+deb http://deb.debian.org/debian ${DEBIAN_SUITE}-updates main
+EOF
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
       bash curl ca-certificates iproute2 iptables tzdata tini \
