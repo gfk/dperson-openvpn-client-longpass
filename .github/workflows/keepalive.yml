@@ -1,0 +1,26 @@
+name: keepalive
+
+on:
+  schedule:
+    - cron: "0 0 */30 * *"   # every 30 days
+
+jobs:
+  keepalive:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Update keepalive timestamp
+        run: |
+          echo "Last keepalive: $(date -u)" > .keepalive.txt
+
+      - name: Commit and push
+        run: |
+          git config user.name "keepalive-bot"
+          git config user.email "gfk@logidac.com"
+          git add .keepalive.txt
+          git commit -m "Github action Keepalive"
+          git push
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
