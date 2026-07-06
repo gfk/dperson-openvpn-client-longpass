@@ -83,7 +83,7 @@ RUN groupadd -r vpn \
 # Bring in the custom package and install everything in one layer
 COPY --from=build /src/openvpn_*_*.deb /tmp/
 
-RUN apt-get update && apt-get install -y --no-install-recommends \
+RUN apt-get update && apt-get upgrade -y && apt-get install -y --no-install-recommends \
       bash curl ca-certificates iproute2 iptables tzdata tini \
       procps psmisc \
       /tmp/openvpn_*_*.deb \
