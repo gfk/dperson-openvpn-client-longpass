@@ -32,12 +32,12 @@ We now publish **two flavors** of this image:
 - **Alpine-based (~19MB)**  
   `ghcr.io/gfk/dperson-openvpn-client-longpass-alpine:latest`  
   Built from [Alpine’s OpenVPN package sources](https://pkgs.alpinelinux.org/package/v3.22/main/x86_64/openvpn).  
-  Best choice if you want a **smaller footprint** and faster startup, with a minimal busybox environment.
+  Best choice if you want a **smaller footprint** and faster startup, a more recent openvpn version, with a minimal busybox environment.
 
-- **Debian-based (~139MB)**  
+- **Debian-based (~119MB)**  
   `ghcr.io/gfk/dperson-openvpn-client-longpass-debian:latest`  
   Built from the [Debian OpenVPN source package](https://tracker.debian.org/pkg/openvpn).  
-  Best choice if you prefer Debian’s packaging, stability, and security updates, or want to modify the setup.
+  Best choice if you prefer Debian’s packaging, stability, more frequent and systematic security updates, or want to modify the setup.
 
 Both versions behave identically from the user’s perspective — the only difference is the underlying base distribution and package source.
 
