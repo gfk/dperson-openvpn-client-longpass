@@ -2,14 +2,11 @@
 
 # Use a dedicated arg for FROM, to avoid scope collisions
 ARG BASE_SUITE=trixie
-ARG OPENVPN_VERSION=2.6.14-1
 ARG BASE_DIGEST
 
 # ---------- build (Debian packaging on ${BASE_SUITE}) ----------
-ARG BASE_SUITE
 FROM debian:${BASE_SUITE}-slim AS build
 ARG BASE_SUITE
-ARG OPENVPN_VERSION
 ENV DEBIAN_FRONTEND=noninteractive DEB_BUILD_OPTIONS="nodoc nocheck" \
     DEBIAN_SUITE=${BASE_SUITE}
 
@@ -27,7 +24,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     && apt-get -y build-dep openvpn
 
 WORKDIR /src
-RUN dget -u https://deb.debian.org/debian/pool/main/o/openvpn/openvpn_${OPENVPN_VERSION}.dsc
+RUN apt-get update && apt-get source openvpn
 
 # Patch: bump USER_PASS_LEN for very long creds
 RUN set -eux; \
@@ -59,7 +56,6 @@ RUN set -eux; \
     dpkg-buildpackage -us -uc -b
 
 # ---------- runtime (${BASE_SUITE}, dperson UX) ----------
-ARG BASE_SUITE
 FROM debian:${BASE_SUITE}-slim
 
 ARG BASE_SUITE
