@@ -1,12 +1,15 @@
 # syntax=docker/dockerfile:1.7
 ARG ALPINE_VERSION=3.22
 ARG ALPINE_BRANCH=3.22-stable
+# Empty = clone the tip of ALPINE_BRANCH; set to a commit SHA to pin aports.
+ARG APORTS_REF=
 ARG BASE_DIGEST
 
 # ---------- build custom .apk from aports (non-root) ----------
 ARG ALPINE_VERSION
 FROM alpine:${ALPINE_VERSION} AS apkbuild
 ARG ALPINE_BRANCH
+ARG APORTS_REF
 
 # tooling + sudo
 RUN apk add --no-cache alpine-sdk abuild git sudo
@@ -25,8 +28,23 @@ RUN adduser -D -h /home/builder builder \
 USER builder
 WORKDIR /home/builder
 
-# aports for the chosen branch (match base version for fewer surprises)
-RUN git clone --depth=1 -b "${ALPINE_BRANCH}" https://gitlab.alpinelinux.org/alpine/aports.git
+# aports for the chosen branch (match base version for fewer surprises).
+# Cloned from the GitHub mirror because gitlab.alpinelinux.org answers HTTP 418
+# (anti-bot) to GitHub Actions runner IPs, which breaks the build on every cold
+# cache. The mirror carries the same branch names. Sparse + blob-filtered: the
+# only thing we need out of the tree is main/openvpn.
+# APORTS_REF pins the checkout to a commit; unset means the branch tip.
+RUN set -eux; \
+    git clone --depth=1 --filter=blob:none --sparse --no-tags \
+        -b "${ALPINE_BRANCH}" \
+        https://github.com/alpinelinux/aports.git; \
+    cd aports; \
+    git sparse-checkout set main/openvpn; \
+    if [ -n "${APORTS_REF:-}" ]; then \
+        git fetch --depth=1 --filter=blob:none --no-tags origin "${APORTS_REF}"; \
+        git checkout --detach FETCH_HEAD; \
+    fi; \
+    git rev-parse HEAD
 
 WORKDIR /home/builder/aports/main/openvpn
 
