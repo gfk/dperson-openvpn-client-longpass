@@ -3,6 +3,14 @@ name: build-alpine
 
 on:
   workflow_dispatch:
+    inputs:
+      aports_ref:
+        description: >-
+          aports commit SHA to pin the openvpn APKBUILD to.
+          Leave blank to build the tip of the Alpine stable branch.
+        required: false
+        type: string
+        default: ""
   push:
     branches:
       - master
@@ -33,6 +41,7 @@ jobs:
     outputs:
       alpine_version: ${{ steps.out.outputs.alpine_version }}
       alpine_branch: ${{ steps.out.outputs.alpine_branch }}
+      aports_ref: ${{ steps.out.outputs.aports_ref }}
       base_digest_amd64: ${{ steps.out.outputs.base_digest_amd64 }}
       base_digest_arm64: ${{ steps.out.outputs.base_digest_arm64 }}
       apk_version: ${{ steps.out.outputs.apk_version }}
@@ -90,8 +99,20 @@ jobs:
 
       - name: Decide build/push
         id: out
+        env:
+          # Only set on workflow_dispatch; empty everywhere else, which builds
+          # the branch tip. Read through env so the value never lands in the
+          # script body.
+          APORTS_REF: ${{ inputs.aports_ref }}
         run: |
           set -euo pipefail
+          case "$APORTS_REF" in
+            "") ;;
+            *[!0-9a-fA-F]*|?|??|???|????|?????|??????)
+              echo "::error::aports_ref must be a commit SHA (>= 7 hex chars), got '$APORTS_REF'"
+              exit 1 ;;
+          esac
+          echo "aports_ref=$APORTS_REF" >> "$GITHUB_OUTPUT"
           echo "alpine_version=${{ steps.alpine-version.outputs.alpine_version }}" >> "$GITHUB_OUTPUT"
           echo "alpine_branch=${{ steps.alpine-branch.outputs.alpine_branch }}"    >> "$GITHUB_OUTPUT"
           echo "apk_version=${{ steps.openvpn-version.outputs.apk_version }}" >> "$GITHUB_OUTPUT"
@@ -148,6 +169,7 @@ jobs:
           build-args: |
             ALPINE_VERSION=${{ needs.prepare.outputs.alpine_version }}
             ALPINE_BRANCH=${{ needs.prepare.outputs.alpine_branch }}
+            APORTS_REF=${{ needs.prepare.outputs.aports_ref }}
             BASE_DIGEST=${{ needs.prepare.outputs.base_digest_amd64 }}
           tags: |
             ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:alpine-${{ needs.prepare.outputs.alpine_version }}-openvpn-${{ needs.prepare.outputs.apk_version }}-amd64
@@ -207,6 +229,7 @@ jobs:
           build-args: |
             ALPINE_VERSION=${{ needs.prepare.outputs.alpine_version }}
             ALPINE_BRANCH=${{ needs.prepare.outputs.alpine_branch }}
+            APORTS_REF=${{ needs.prepare.outputs.aports_ref }}
             BASE_DIGEST=${{ needs.prepare.outputs.base_digest_arm64 }}
           tags: |
             ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:alpine-${{ needs.prepare.outputs.alpine_version }}-openvpn-${{ needs.prepare.outputs.apk_version }}-arm64
