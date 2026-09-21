@@ -22,6 +22,7 @@ If your provider is giving you an `AUTH_FAILED` and your credentials look like a
 ### Nightly build if there's an upgrade from upstream
 
 Every night, a Github action (based on [`utkuozdemir/dperson-openvpn-client`](https://github.com/utkuozdemir/dperson-openvpn-client)) **checks if there's a new version of `openvpn` or the base image**, if so, it builds a new image with the latest versions. This ensures that we're always up to date and **avoid any known security vulnerabilities** without any manual intervention.
+A nightly rebuild can only ship what the distribution has already published, though — the [July 2026 case study](#case-study-debian-vs-alpine-security-response-july-2026) shows what that looks like when a distribution is slow.
 
 ---
 
@@ -31,15 +32,108 @@ We now publish **two flavors** of this image:
 
 - **Alpine-based (~19MB)**  
   `ghcr.io/gfk/dperson-openvpn-client-longpass-alpine:latest`  
-  Built from [Alpine’s OpenVPN package sources](https://pkgs.alpinelinux.org/package/v3.22/main/x86_64/openvpn).  
-  Best choice if you want a **smaller footprint** and faster startup, a more recent openvpn version, with a minimal busybox environment.
+  Built from [Alpine’s OpenVPN package sources](https://pkgs.alpinelinux.org/package/v3.24/main/x86_64/openvpn).  
+  Best choice if you want a **smaller footprint** and faster startup, a more recent openvpn version, with a minimal busybox environment.  
+  Be aware that Alpine security fixes can take noticeably longer to land than Debian’s — see the [July 2026 case study](#case-study-debian-vs-alpine-security-response-july-2026).
 
 - **Debian-based (~119MB)**  
   `ghcr.io/gfk/dperson-openvpn-client-longpass-debian:latest`  
   Built from the [Debian OpenVPN source package](https://tracker.debian.org/pkg/openvpn).  
-  Best choice if you prefer Debian’s packaging, stability, more frequent and systematic security updates, or want to modify the setup.
+  Best choice if you prefer Debian’s packaging, stability, [more frequent and systematic security updates](#case-study-debian-vs-alpine-security-response-july-2026), or want to modify the setup.
 
 Both versions behave identically from the user’s perspective — the only difference is the underlying base distribution and package source.
+
+---
+
+## Case study: Debian vs Alpine security response (July 2026)
+
+“More frequent and systematic security updates” is easy to claim, so here is a
+measured example, end to end, with the commits and advisories you can check
+yourself.
+
+### The vulnerabilities
+
+On **1 July 2026** the OpenVPN project announced
+[2.6.21](https://github.com/OpenVPN/openvpn/releases/tag/v2.6.21) and
+[2.7.5](https://github.com/OpenVPN/openvpn/releases/tag/v2.7.5)
+(see the [release history](https://community.openvpn.net/ReleaseHistory#openvpn-2621-released-1-july-2026);
+the GitHub tags were published on 2 July). Between them they fix **six CVEs**:
+
+| CVE | Issue |
+|---|---|
+| [CVE-2026-12996](https://security-tracker.debian.org/tracker/CVE-2026-12996) | Use-after-free in `ack_write_buf()`, reachable from control-channel and authentication packets |
+| [CVE-2026-13117](https://security-tracker.debian.org/tracker/CVE-2026-13117) | Use-after-free in `tls_wrap_reneg()`, reachable from dynamic `tls-crypt` control-channel packets |
+| [CVE-2026-13122](https://security-tracker.debian.org/tracker/CVE-2026-13122) | Crash on a malformed `auth-token` when `external-auth` is enabled |
+| [CVE-2026-12932](https://security-tracker.debian.org/tracker/CVE-2026-12932) | Memory leak in `tls-crypt-v2` client key handling, leading to OOM |
+| [CVE-2026-11771](https://security-tracker.debian.org/tracker/CVE-2026-11771) | 1-byte buffer overrun on NTLMv2 proxy responses |
+| [CVE-2026-13698](https://security-tracker.debian.org/tracker/CVE-2026-13698) | Memory leak on reception of `tls-crypt-v2` packets, causing OOM and crashes |
+
+To be fair to Alpine: several of these are primarily *server*-side denial of
+service, so a client-only image like this one is less exposed than an OpenVPN
+server would be. The point of the case study is not the severity — it is **how
+long each distribution took to ship a fix at all**.
+
+### The timeline
+
+| Date (2026) | What happened |
+|---|---|
+| **1–2 Jul** | OpenVPN releases 2.6.21 and 2.7.5. |
+| **3 Jul** | Debian publishes [DSA-6376-1](https://lists.debian.org/debian-security-announce/2026/msg00287.html) with `openvpn 2.6.14-1+deb13u3` — all six CVEs **backported** into the version frozen in *trixie*. **~1 day.** |
+| **3 Jul** | Alpine opens [aports issue #18308](https://gitlab.alpinelinux.org/alpine/aports/-/work_items/18308) asking for an upgrade to 2.7.5. |
+| **4 Jul, AM** | Our nightly pipeline picks up the new Debian package; the patched `…-longpass-debian` image is available via `docker pull`. |
+| **13 Jul** | Alpine lands the fix — aports commit [`f84ec99`](https://github.com/alpinelinux/aports/commit/f84ec990) *“main/openvpn: security upgrade to 2.7.5”* on `3.24-stable` (and the same day on `master`). **10 days.** |
+| **14 Jul** | Our nightly pipeline picks it up; the patched `…-longpass-alpine` image is available via `docker pull`. |
+| **still open** | The fix was **never** backported to `3.22-stable` or `3.23-stable`, both still supported (EOL May 2027 and Nov 2027). They remain on [`openvpn 2.6.20-r0`](https://pkgs.alpinelinux.org/package/v3.22/main/x86_64/openvpn) from 29 April 2026. |
+
+So Debian went from upstream release to a patched, pull-able image in about
+**48 hours**; Alpine took **twelve days** for the same trip. For those ten days
+in between, the Alpine variant of this image was shipping a known-vulnerable
+OpenVPN while the Debian variant was not — and there was nothing our pipeline
+could have done about it.
+
+### Why the two distributions behave so differently
+
+- **Debian backports fixes into the frozen version.** A Debian stable release
+  pins an upstream version for its whole life and the security team applies
+  individual patches on top of it. That is why *trixie* still calls its package
+  `2.6.14` while carrying fixes released in July 2026. A dedicated security
+  team, a published advisory feed (DSA), and a `-security` suite that every
+  Debian install already has enabled make the process **systematic**: the
+  advisory and the fixed package land together, for every supported release.
+- **Alpine ships version bumps.** An Alpine fix is usually a `pkgver` bump in
+  `aports`, done by whoever maintains the package, and it moves at the speed of
+  that one person. The current stable branch usually gets it; older branches
+  get a cherry-pick only if someone bothers, and here nobody did. There is no
+  per-package advisory stream comparable to DSA to hold the process
+  accountable.
+
+### Two lessons worth taking away
+
+1. **A nightly rebuild only helps if the distribution has published a fix.**
+   Our pipeline did its job in both cases — it rebuilt the night the package
+   changed, and the image was pullable the next morning. Rebuilding nightly
+   shortens *your* half of the delay; it cannot shorten the distribution’s.
+   “Latest image” is not the same as “patched”.
+2. **A higher version number is not a proxy for patch level.** Between 3 and 13
+   July, Alpine 3.24 carried `openvpn 2.7.3` and Debian *trixie* carried
+   `2.6.14-1+deb13u3`. The lower-looking number was the patched one. On Debian,
+   the `+deb13uN` suffix is the part that tells you about security backports —
+   check it, not the upstream version:
+
+   ```bash
+   docker run --rm ghcr.io/gfk/dperson-openvpn-client-longpass-debian:latest \
+     bash -lc 'dpkg -s openvpn | grep ^Version'
+   ```
+
+   Current state of both sources is public:
+   [Debian security tracker](https://security-tracker.debian.org/tracker/source-package/openvpn)
+   ·
+   [Alpine package](https://pkgs.alpinelinux.org/package/v3.24/main/x86_64/openvpn)
+
+None of this makes Alpine a bad base image — it is smaller, and its current
+stable branch tracks the 2.7 series that upstream now develops on. But if
+predictable, documented security maintenance is what you are optimizing for,
+**use the Debian variant**.
 
 ---
 
