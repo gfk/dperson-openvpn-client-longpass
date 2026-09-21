@@ -47,10 +47,6 @@ Both versions behave identically from the user’s perspective — the only diff
 
 ## Case study: Debian vs Alpine security response (July 2026)
 
-“More frequent and systematic security updates” is easy to claim, so here is a
-measured example, end to end, with the commits and advisories you can check
-yourself.
-
 ### The vulnerabilities
 
 On **1 July 2026** the OpenVPN project announced
@@ -80,7 +76,7 @@ long each distribution took to ship a fix at all**.
 | **1–2 Jul** | OpenVPN releases 2.6.21 and 2.7.5. |
 | **3 Jul** | Debian publishes [DSA-6376-1](https://lists.debian.org/debian-security-announce/2026/msg00287.html) with `openvpn 2.6.14-1+deb13u3` — all six CVEs **backported** into the version frozen in *trixie*. **~1 day.** |
 | **3 Jul** | Alpine opens [aports issue #18308](https://gitlab.alpinelinux.org/alpine/aports/-/work_items/18308) asking for an upgrade to 2.7.5. |
-| **4 Jul, AM** | Our nightly pipeline picks up the new Debian package; the patched `…-longpass-debian` image is available via `docker pull`. |
+| **4 Jul** | Our nightly pipeline picks up the new Debian package; the patched `…-longpass-debian` image is available via `docker pull`. |
 | **13 Jul** | Alpine lands the fix — aports commit [`f84ec99`](https://github.com/alpinelinux/aports/commit/f84ec990) *“main/openvpn: security upgrade to 2.7.5”* on `3.24-stable` (and the same day on `master`). **10 days.** |
 | **14 Jul** | Our nightly pipeline picks it up; the patched `…-longpass-alpine` image is available via `docker pull`. |
 
