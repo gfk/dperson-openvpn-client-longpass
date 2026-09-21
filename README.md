@@ -71,20 +71,21 @@ long each distribution took to ship a fix at all**.
 
 ### The timeline
 
-| Date (2026) | What happened |
-|---|---|
-| **1–2 Jul** | OpenVPN releases 2.6.21 and 2.7.5. |
-| **3 Jul** | Debian publishes [DSA-6376-1](https://lists.debian.org/debian-security-announce/2026/msg00287.html) with `openvpn 2.6.14-1+deb13u3` — all six CVEs **backported** into the version frozen in *trixie*. **~1 day.** |
-| **3 Jul** | Alpine opens [aports issue #18308](https://gitlab.alpinelinux.org/alpine/aports/-/work_items/18308) asking for an upgrade to 2.7.5. |
-| **4 Jul** | Our nightly pipeline picks up the new Debian package; the patched `…-longpass-debian` image is available via `docker pull`. |
-| **13 Jul** | Alpine lands the fix — aports commit [`f84ec99`](https://github.com/alpinelinux/aports/commit/f84ec990) *“main/openvpn: security upgrade to 2.7.5”* on `3.24-stable` (and the same day on `master`). **10 days.** |
-| **14 Jul** | Our nightly pipeline picks it up; the patched `…-longpass-alpine` image is available via `docker pull`. |
+| Date (July 2026) | Debian | Alpine |
+|---|---|---|
+| **1st** | [OpenVPN 2.6.21](https://github.com/OpenVPN/openvpn/releases/tag/v2.6.21) released, fixing six CVEs | [OpenVPN 2.7.5](https://github.com/OpenVPN/openvpn/releases/tag/v2.7.5) released, fixing the same six CVEs |
+| **3rd** | [DSA-6376-1](https://lists.debian.org/debian-security-announce/2026/msg00287.html) — `openvpn 2.6.14-1+deb13u3`, all six CVEs backported into *trixie*. **1 day after release.** | [aports issue #18308](https://gitlab.alpinelinux.org/alpine/aports/-/work_items/18308) opened, asking someone to upgrade the package to 2.7.5 |
+| **4th** | nightly rebuild → patched image available on `docker pull` | |
+| **5th–12th** | | |
+| **13th** | | aports commit [`f84ec99`](https://github.com/alpinelinux/aports/commit/f84ec990) — `pkgver` bumped to 2.7.5 on `3.24-stable`. **10 days after release.** |
+| **14th** | | nightly rebuild → patched image available on `docker pull` |
+| **Total, upstream → your machine** | **~4 days** | **~14 days** |
 
-So Debian went from upstream release to a patched, pull-able image in about
-**48 hours**; Alpine took **twelve days** for the same trip. For those ten days
-in between, the Alpine variant of this image was shipping a known-vulnerable
-OpenVPN while the Debian variant was not — and there was nothing our pipeline
-could have done about it.
+The empty cells are the point. After 4 July Debian had nothing left to do, while
+Alpine users waited another nine days. For those ten days the Alpine variant of
+this image shipped a known-vulnerable OpenVPN and the Debian variant did not.
+Our pipeline behaved identically in both cases — it rebuilt the night the
+package changed — so the whole difference happened upstream of us.
 
 ### Why the two distributions behave so differently
 
