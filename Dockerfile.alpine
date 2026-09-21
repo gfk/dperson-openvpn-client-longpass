@@ -1,12 +1,15 @@
 # syntax=docker/dockerfile:1.7
-ARG ALPINE_VERSION=3.24
-ARG ALPINE_BRANCH=3.24-stable
+# Defaults track Alpine's current stable release so they cannot go stale:
+# alpine:latest is always the newest stable, and an empty ALPINE_BRANCH is
+# derived from the base image's /etc/os-release at build time. CI resolves and
+# passes both explicitly; override them to build against an older release.
+ARG ALPINE_VERSION=latest
+ARG ALPINE_BRANCH=
 # Empty = clone the tip of ALPINE_BRANCH; set to a commit SHA to pin aports.
 ARG APORTS_REF=
 ARG BASE_DIGEST
 
 # ---------- build custom .apk from aports (non-root) ----------
-ARG ALPINE_VERSION
 FROM alpine:${ALPINE_VERSION} AS apkbuild
 ARG ALPINE_BRANCH
 ARG APORTS_REF
@@ -28,13 +31,22 @@ RUN adduser -D -h /home/builder builder \
 USER builder
 WORKDIR /home/builder
 
-# aports for the chosen branch (match base version for fewer surprises).
+# aports for the branch matching the base image: ALPINE_BRANCH is derived from
+# /etc/os-release when unset, so it follows whatever alpine:latest resolves to.
 # Cloned from the GitHub mirror because gitlab.alpinelinux.org answers HTTP 418
 # (anti-bot) to GitHub Actions runner IPs, which breaks the build on every cold
 # cache. The mirror carries the same branch names. Sparse + blob-filtered: the
 # only thing we need out of the tree is main/openvpn.
 # APORTS_REF pins the checkout to a commit; unset means the branch tip.
 RUN set -eux; \
+    if [ -z "${ALPINE_BRANCH:-}" ]; then \
+        . /etc/os-release; \
+        case "${VERSION_ID}" in \
+            *_*) ALPINE_BRANCH=master ;; \
+            *)   ALPINE_BRANCH="${VERSION_ID%.*}-stable" ;; \
+        esac; \
+    fi; \
+    echo "aports branch: ${ALPINE_BRANCH}"; \
     git clone --depth=1 --filter=blob:none --sparse --no-tags \
         -b "${ALPINE_BRANCH}" \
         https://github.com/alpinelinux/aports.git; \
@@ -80,7 +92,6 @@ RUN set -eux; \
   cp /home/builder/.abuild/*.rsa.pub /home/builder/out/
 
 # ---------- minimal runtime (unchanged) ----------
-ARG ALPINE_VERSION
 FROM alpine:${ALPINE_VERSION}
 
 ARG BASE_DIGEST
