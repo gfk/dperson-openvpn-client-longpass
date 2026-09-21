@@ -1,6 +1,6 @@
 # syntax=docker/dockerfile:1.7
-ARG ALPINE_VERSION=3.22
-ARG ALPINE_BRANCH=3.22-stable
+ARG ALPINE_VERSION=3.24
+ARG ALPINE_BRANCH=3.24-stable
 # Empty = clone the tip of ALPINE_BRANCH; set to a commit SHA to pin aports.
 ARG APORTS_REF=
 ARG BASE_DIGEST

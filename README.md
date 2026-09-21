@@ -83,7 +83,6 @@ long each distribution took to ship a fix at all**.
 | **4 Jul, AM** | Our nightly pipeline picks up the new Debian package; the patched `…-longpass-debian` image is available via `docker pull`. |
 | **13 Jul** | Alpine lands the fix — aports commit [`f84ec99`](https://github.com/alpinelinux/aports/commit/f84ec990) *“main/openvpn: security upgrade to 2.7.5”* on `3.24-stable` (and the same day on `master`). **10 days.** |
 | **14 Jul** | Our nightly pipeline picks it up; the patched `…-longpass-alpine` image is available via `docker pull`. |
-| **still open** | The fix was **never** backported to `3.22-stable` or `3.23-stable`, both still supported (EOL May 2027 and Nov 2027). They remain on [`openvpn 2.6.20-r0`](https://pkgs.alpinelinux.org/package/v3.22/main/x86_64/openvpn) from 29 April 2026. |
 
 So Debian went from upstream release to a patched, pull-able image in about
 **48 hours**; Alpine took **twelve days** for the same trip. For those ten days
@@ -102,10 +101,8 @@ could have done about it.
   advisory and the fixed package land together, for every supported release.
 - **Alpine ships version bumps.** An Alpine fix is usually a `pkgver` bump in
   `aports`, done by whoever maintains the package, and it moves at the speed of
-  that one person. The current stable branch usually gets it; older branches
-  get a cherry-pick only if someone bothers, and here nobody did. There is no
-  per-package advisory stream comparable to DSA to hold the process
-  accountable.
+  that one person. There is no dedicated security team and no per-package
+  advisory stream comparable to DSA to hold the process to a schedule.
 
 ### Two lessons worth taking away
 
